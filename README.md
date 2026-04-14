@@ -3,7 +3,7 @@
 HadoSaaS is a Laravel starter kit designed for rapid development of SaaS and admin-oriented applications.
 It comes with essential features like modular structure, user roles, settings management,
 and more, making it easy to get started with scalable and organized projects.
-It saves for you at least 70 - 100 Hr.
+It saves you at least 50-75 hours.
 
 ## Youtube Video
 
@@ -21,12 +21,12 @@ functionalities required in most SaaS or admin projects.
 - **User & Role Management**: Implement user permissions and role-based access control.
 - **Settings Module**: Centralized configuration for app-wide settings.
 - **Support**: two langs en & ar
-- **Admin Panel**: the project use metronic admin panel
+- **Admin Panel**: The project uses the Metronic admin panel.
 
 ## Requirements
 
-- **Laravel**: Built on Laravel 11
-- **PHP**: Requires PHP 8.2 or higher
+- **Laravel**: Built on Laravel 13
+- **PHP**: Requires PHP 8.4 or higher
 
 ## Packages Used
 
