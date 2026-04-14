@@ -9,6 +9,7 @@ abstract class Controller
 {
     final protected function setActive(string $key)
     {
+        $active = view()->shared('active', []);
         $active[$key] = true;
         view()->share('active', $active);
 
