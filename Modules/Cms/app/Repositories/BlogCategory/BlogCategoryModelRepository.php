@@ -28,23 +28,46 @@ class BlogCategoryModelRepository implements BlogCategoryRepository {
         });
     }
 
-    private function prepareCategoryData(array $data): array {
-        $transName = [app()->getLocale() => $data['name']];
-        foreach (otherLangs() as $lang) {
-            try {
-                $transName[$lang] = autoGoogleTranslator($lang, $data['name']);
-            } catch (Exception $e) {
-                Log::error($e->getMessage());
+    private function prepareCategoryData(
+        array $data,
+        ?BlogCategory $category = null,
+        bool $updateTranslations = true
+    ): array {
+        $locale = app()->getLocale();
+        $transName = $category?->getTranslations('name') ?? [];
+
+        $sourceName = is_array($data['name'])
+            ? ($data['name'][$locale] ?? reset($data['name']) ?: '')
+            : $data['name'];
+
+        $transName[$locale] = $sourceName;
+
+        if (is_array($data['name'])) {
+            foreach ($data['name'] as $lang => $name) {
+                if ($name) {
+                    $transName[$lang] = $name;
+                }
             }
         }
+
+        if ($updateTranslations) {
+            foreach (otherLangs() as $lang) {
+                try {
+                    $transName[$lang] = autoGoogleTranslator($lang, $sourceName);
+                } catch (Exception $e) {
+                    Log::error($e->getMessage());
+                }
+            }
+        }
+
         return array_merge($data, [
             'name' => $transName,
         ]);
     }
 
-    public function update(array $data, BlogCategory $category): mixed {
-        return $this->execute(function () use ($data, $category) {
-            $categoryData = $this->prepareCategoryData($data);
+    public function update(array $data, BlogCategory $category, bool $updateTranslations = false): mixed {
+        return $this->execute(function () use ($data, $category, $updateTranslations) {
+            $categoryData = $this->prepareCategoryData($data, $category, $updateTranslations);
             $category->update($categoryData);
             session()->flushMessage(true);
             return true;

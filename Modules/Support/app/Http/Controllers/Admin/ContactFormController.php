@@ -4,11 +4,11 @@ namespace Modules\Support\app\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Modules\Core\Http\Requests\DeleteMultiRequest;
-use Modules\Support\Models\ContactForm;
+use Modules\Support\Application\SupportAdmin\SupportInboxApplicationService;
 
 class ContactFormController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly SupportInboxApplicationService $supportInboxService)
     {
         $this->setActive('support');
         $this->setActive('contact_forms');
@@ -16,15 +16,14 @@ class ContactFormController extends Controller
 
     public function index()
     {
-        $model = ContactForm::latest()->paginate(config('core.page_size'));
+        $model = $this->supportInboxService->paginateContactForms();
 
         return view('support::admin.contact_form.index', compact('model'));
     }
 
     public function deleteMulti(DeleteMultiRequest $request)
     {
-        ContactForm::destroy($request->ids);
-        session()->flushMessage(true);
+        $this->supportInboxService->deleteContactForms($request->ids);
 
         return redirect()->back();
     }

@@ -4,14 +4,17 @@ namespace Modules\User\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Modules\User\Application\Role\RoleManagementApplicationService;
+use Modules\User\Application\User\UserManagementApplicationService;
 use Modules\User\app\Data\UserData;
-use Modules\User\app\Repositories\User\UserRepository;
 use Modules\User\Http\Requests\StoreUserRequest;
-use Modules\User\Repositories\Role\RoleRepository;
 
 class StaffController extends Controller
 {
-    public function __construct(protected UserRepository $userRepository, protected RoleRepository $roleRepository)
+    public function __construct(
+        protected UserManagementApplicationService $userService,
+        protected RoleManagementApplicationService $roleService
+    )
     {
         $this->setActive('hr');
         $this->setActive('staffs');
@@ -19,8 +22,8 @@ class StaffController extends Controller
 
     public function index()
     {
-        $roles = $this->roleRepository->all();
-        $model = $this->userRepository->all('admin');
+        $roles = $this->roleService->all();
+        $model = $this->userService->paginate('admin');
 
         return view('user::.admin.staff.index', compact('model', 'roles'));
     }
@@ -28,8 +31,8 @@ class StaffController extends Controller
     public function store(StoreUserRequest $request)
     {
         $userData = UserData::validateAndCreate($request->all());
-        $user = $this->userRepository->store($userData);
-        $this->roleRepository->assignUsersToRole($request->input('role_id'), [$user->id]);
+        $user = $this->userService->store($userData);
+        $this->roleService->assignUsersToRole($request->input('role_id'), [$user->id]);
 
         return redirect()->route('admin.staffs.index');
     }
@@ -37,16 +40,16 @@ class StaffController extends Controller
     public function update(Request $request, $id)
     {
         $userData = UserData::validateAndCreate($request->all());
-        $user = $this->userRepository->find($id);
-        $this->userRepository->update($userData, $user);
+        $user = $this->userService->find($id);
+        $this->userService->update($userData, $user);
 
         return redirect()->route('admin.staffs.index');
     }
 
     public function destroy($id)
     {
-        $user = $this->userRepository->find($id);
-        $this->userRepository->delete($user);
+        $user = $this->userService->find($id);
+        $this->userService->delete($user);
 
         return response()->json([
             'success' => true,

@@ -54,7 +54,7 @@ class BlogCategoryController extends Controller
             'name' => $request->input('name'),
             'slug' => $blogs_category->slug,
         ];
-        $this->categoryRepository->update($data, $blogs_category);
+        $this->categoryRepository->update($data, $blogs_category, $request->boolean('update_translations'));
 
         return redirect()->route('admin.blogs_categories.index');
     }

@@ -4,6 +4,10 @@ namespace Modules\Support\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Modules\Support\Repositories\ContactForm\ContactFormModelRepository;
+use Modules\Support\Repositories\ContactForm\ContactFormRepository;
+use Modules\Support\Repositories\Subscriber\SubscriberModelRepository;
+use Modules\Support\Repositories\Subscriber\SubscriberRepository;
 use Nwidart\Modules\Traits\PathNamespace;
 
 class SupportServiceProvider extends ServiceProvider
@@ -106,6 +110,8 @@ class SupportServiceProvider extends ServiceProvider
     {
         $this->app->register(EventServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
+        $this->app->bind(SubscriberRepository::class, SubscriberModelRepository::class);
+        $this->app->bind(ContactFormRepository::class, ContactFormModelRepository::class);
     }
 
     /**

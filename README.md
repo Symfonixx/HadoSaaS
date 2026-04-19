@@ -1,54 +1,87 @@
 # HadoSaaS
 
-HadoSaaS is a Laravel starter kit designed for rapid development of SaaS and admin-oriented applications.
-It comes with essential features like modular structure, user roles, settings management,
-and more, making it easy to get started with scalable and organized projects.
-It saves you at least 50-75 hours.
+HadoSaaS is a Laravel 13 modular starter kit for SaaS and admin systems.  
+It follows a DDD-lite architecture so features can scale without mixing transport, business orchestration, and persistence concerns.
 
-## Youtube Video
+## System Design
 
-https://youtu.be/wZxniy8CLsM
+The project is organized by modules using `nwidart/laravel-modules`:
 
-## Purpose
+- `Modules/Core`: shared infrastructure (helpers, macros, console commands, contracts/services)
+- `Modules/Base`: system settings, SEO, logs, admin configuration concerns
+- `Modules/Cms`: pages, blogs, categories
+- `Modules/User`: users, roles, permissions
+- `Modules/Support`: contact forms and subscribers
 
-The purpose of HadoSaaS is to provide developers with a solid foundation to build powerful SaaS applications.
-With built-in support for user management, settings, and roles, this starter kit saves time by including core
-functionalities required in most SaaS or admin projects.
+Each module can follow this DDD-lite shape:
 
-## Key Features
+- `Http/Controllers`: request/response transport only
+- `Application/*`: use-case orchestration
+- `Application/*/Commands|Queries`: explicit inputs for use-cases
+- `Repositories/*`: persistence and query access only
+- `Models/*`: entity state/relations
 
-- **Modular Architecture**: Easily extend and manage features as independent modules.
-- **User & Role Management**: Implement user permissions and role-based access control.
-- **Settings Module**: Centralized configuration for app-wide settings.
-- **Support**: two langs en & ar
-- **Admin Panel**: The project uses the Metronic admin panel.
+See `DDD_LITE_ARCHITECTURE.md` for full conventions and migration rules.
+
+## Core Architecture Rules
+
+- Controllers delegate business flows to Application Services.
+- Repositories do not read directly from `request()`.
+- Cross-cutting concerns use contracts/services (e.g. translation, flash messaging).
+- Keep routes and Blade contracts stable while refactoring internals.
 
 ## Requirements
 
-- **Laravel**: Built on Laravel 13
-- **PHP**: Requires PHP 8.4 or higher
+- PHP `^8.4`
+- Composer
+- Node.js + npm
+- MySQL/MariaDB (or a compatible database configured in `.env`)
 
-## Packages Used
+## Main Packages
 
-## Packages Used
+- [laravel/framework](https://laravel.com)
+- [nwidart/laravel-modules](https://github.com/nWidart/laravel-modules)
+- [spatie/laravel-data](https://github.com/spatie/laravel-data)
+- [spatie/laravel-permission](https://github.com/spatie/laravel-permission)
+- [spatie/laravel-translatable](https://github.com/spatie/laravel-translatable)
+- [mcamara/laravel-localization](https://github.com/mcamara/laravel-localization)
+- [intervention/image-laravel](https://github.com/Intervention/image)
+- [laravel/telescope](https://laravel.com/docs/telescope)
+- [laravel/pulse](https://laravel.com/docs/pulse)
 
-HadoSaaS is built with the following key Laravel packages:
+## Installation
 
-- **[laravel-modules](https://github.com/nWidart/laravel-modules)**: For modular structure and organized code.
-- **[laravel-data](https://github.com/spatie/laravel-data)**: For managing and transforming data transfer objects.
-- **[laravel-permission](https://github.com/spatie/laravel-permission)**: For role and permission management.
-- **[laravel-localization](https://github.com/mcamara/laravel-localization)**: To support multiple languages in the app.
-- **[image-laravel](https://github.com/Intervention/image)**: For handling and manipulating images.
-- **[Laravel Telescope](https://laravel.com/docs/telescope)**: A powerful debugging assistant for Laravel.
-- **[Laravel Pulse](https://laravel.com/docs/pulse)**: A modern, real-time performance monitoring tool for Laravel
-  applications.
+1. Install dependencies:
+   - `composer install`
+   - `npm install`
+2. Build assets:
+   - `npm run build`
+3. Run installer:
+   - `php artisan app:install`
 
-## Getting Started
+### Installer Command Options
 
-To set up HadoSaaS, follow these steps:
+`app:install` now supports system bootstrap options:
 
-1. Run `composer update` to install vendor dependencies.
-2. Run `npm install && npm run build` to install node dependencies
-3. Run `php artisan app:install` to complete the setup.
+- `--fresh`: run `migrate:fresh` instead of incremental `migrate`
+- `--skip-sql`: skip importing `Modules/Core/database/db.sql`
+- `--admin-name=...`
+- `--admin-email=...`
+- `--admin-password=...`
+- `--admin-mobile=...`
 
-Perfect for developers who want to kickstart their next Laravel SaaS project with a pre-built foundation!
+Example:
+
+```bash
+php artisan app:install --fresh --admin-email=owner@example.com --admin-password=StrongPass123!
+```
+
+## Default Admin (if options are not passed)
+
+- Email: `admin@example.com`
+- Password: `12345678`
+
+## Development Notes
+
+- Run tests: `php artisan test`
+- Run architecture checks: `composer test:architecture`

@@ -14,17 +14,16 @@ class LogDb extends Model
 
     protected $appends = ['color'];
 
-    public function scopeFilter($query)
+    public function scopeFilter($query, array $filters = [])
     {
-        $request = request();
         // Filter by level name
-        $level = $request->query('fLevel');
+        $level = $filters['fLevel'] ?? null;
         if ($level) {
             $query->where('level_name', $level);
         }
 
         // Filter by date
-        if ($date = $request->query('fDate')) {
+        if ($date = ($filters['fDate'] ?? null)) {
             $query->when($date == 1, fn ($query) => $query->whereDate('created_at', Carbon::today()))
                 ->when($date == 2, fn ($query) => $query->whereDate('created_at', Carbon::yesterday()))
                 ->when($date == 3, fn ($query) => $query->whereDate('created_at', '>', Carbon::now()->subWeek()));

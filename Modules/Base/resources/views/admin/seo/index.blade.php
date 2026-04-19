@@ -79,5 +79,19 @@
                        value="{{$seo->get('main_title')}}" placeholder="Boots your website traffic today "/>
             </div>
         </div>
+        <div class="row mb-8">
+            <div class="col-xl-3">
+                <div class="fs-6 fw-bold mt-2 mb-3">{{ __('Update Other Languages') }}</div>
+            </div>
+            <div class="col-xl-9 fv-row">
+                <div class="form-check form-check-custom form-check-solid">
+                    <input class="form-check-input" type="checkbox" name="update_translations"
+                           id="update_translations" value="1" @checked(old('update_translations'))>
+                    <label class="form-check-label" for="update_translations">
+                        {{ __('Use Google Translate to update all other languages.') }}
+                    </label>
+                </div>
+            </div>
+        </div>
     </x-admin.create-card>
 </x-admin-layout>

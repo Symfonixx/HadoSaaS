@@ -27,7 +27,6 @@ class RoleModelRepository implements RoleRepository
         return $this->execute(function () use ($name, $permissions) {
             $role = Role::create(['name' => $name]);
             $role->syncPermissions($permissions);
-            session()->flushMessage(true);
 
             return $role;
         });
@@ -39,7 +38,6 @@ class RoleModelRepository implements RoleRepository
             $role = $this->findById($id);
             $role->update(['name' => $name]);
             $role->syncPermissions($permissions);
-            session()->flushMessage(true);
 
             return $role;
         });
@@ -63,7 +61,6 @@ class RoleModelRepository implements RoleRepository
             $role = $this->findById($id);
             $users = User::whereIn('id', $userIds)->get();
             $role->users()->syncWithoutDetaching($users);
-            session()->flushMessage(true);
 
             return true;
         });
@@ -75,7 +72,6 @@ class RoleModelRepository implements RoleRepository
             $role = $this->findById($id);
             $users = User::whereIn('id', $userIds)->get();
             $role->users()->detach($users);
-            session()->flushMessage(true);
 
             return true;
         });
@@ -87,7 +83,6 @@ class RoleModelRepository implements RoleRepository
             $user = User::findOrFail($userId);
             $role = $this->findById($id);
             $user->roles()->detach($role);
-            session()->flushMessage(true);
 
             return true;
         });

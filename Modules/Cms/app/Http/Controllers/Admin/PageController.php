@@ -5,19 +5,18 @@ namespace Modules\Cms\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Modules\Cms\Application\Page\Commands\UpsertPageCommand;
+use Modules\Cms\Application\Page\PageApplicationService;
+use Modules\Cms\Application\Shared\Queries\ContentListQuery;
 use Modules\Cms\Data\PageData;
 use Modules\Cms\Models\Page;
-use Modules\Cms\Repositories\Page\PageRepository;
 use Modules\Core\Http\Requests\DeleteMultiRequest;
 use Modules\User\Enums\CmsStatus;
 
 class PageController extends Controller
 {
-    protected PageRepository $pageRepository;
-
-    public function __construct(PageRepository $pageRepository)
+    public function __construct(private readonly PageApplicationService $pageService)
     {
-        $this->pageRepository = $pageRepository;
         $this->setActive('cms');
         $this->setActive('pages');
     }
@@ -27,7 +26,10 @@ class PageController extends Controller
      */
     public function index()
     {
-        $model = $this->pageRepository->all([
+        $model = $this->pageService->paginate(new ContentListQuery(
+            publish: request()->query('publish'),
+            type: request()->query('type')
+        ), [
             'id', 'title', 'slug', 'image', 'status', 'featured', 'visits', 'created_at',
         ]);
 
@@ -60,7 +62,7 @@ class PageController extends Controller
             'featured' => $request->boolean('featured'),
         ]);
 
-        $this->pageRepository->store($data);
+        $this->pageService->store(UpsertPageCommand::fromValidated($data));
 
         return redirect()->route('admin.pages.index');
     }
@@ -79,6 +81,8 @@ class PageController extends Controller
      */
     public function update(Request $request, Page $page): RedirectResponse
     {
+        $updateTranslations = $request->boolean('update_translations');
+
         // Convert request data to PageData DTO
         $data = PageData::validate([
             'title' => $request->input('title'),
@@ -90,7 +94,7 @@ class PageController extends Controller
             'status' => $request->has('publish') ? CmsStatus::PUBLISHED : CmsStatus::ARCHIVED,
             'featured' => $request->boolean('featured'),
         ]);
-        $this->pageRepository->update($data, $page);
+        $this->pageService->update($page, UpsertPageCommand::fromValidated($data, $updateTranslations));
 
         return redirect()->route('admin.pages.index');
     }
@@ -100,7 +104,7 @@ class PageController extends Controller
      */
     public function deleteMulti(DeleteMultiRequest $request): RedirectResponse
     {
-        $this->pageRepository->deleteMulti($request->input('ids'));
+        $this->pageService->deleteMulti($request->input('ids'));
 
         return back();
     }

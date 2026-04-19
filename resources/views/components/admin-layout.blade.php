@@ -175,7 +175,7 @@ Author: Hadi Hilal
                                 <!--end::Menu separator-->
 
                                 <div class="menu-item px-5">
-                                    <a href="#" class="menu-link px-5">
+                                    <a href="{{route('admin.profile.edit')}}" class="menu-link px-5">
                                         {{__('My Profile')}}
                                     </a>
                                 </div>

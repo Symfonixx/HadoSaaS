@@ -33,7 +33,6 @@ class UserModelRepository implements UserRepository
                 'password' => Hash::make($userData->password),
                 'type' => $userData->type,
             ]);
-            session()->flushMessage(true);
 
             return $user;
         });
@@ -52,8 +51,6 @@ class UserModelRepository implements UserRepository
             }
 
             $user->update($updateData);
-
-            session()->flushMessage(true);
 
             return $user;
         });

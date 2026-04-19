@@ -9,15 +9,19 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputOption;
 
 class InstallAppCommand extends Command
 {
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'app:install';
+    protected $signature = 'app:install
+                            {--fresh : Drop all tables and re-run all migrations}
+                            {--skip-sql : Skip importing Modules/Core/database/db.sql}
+                            {--admin-name=Admin : Initial admin display name}
+                            {--admin-email=admin@example.com : Initial admin email}
+                            {--admin-password=12345678 : Initial admin password}
+                            {--admin-mobile=0905000000000 : Initial admin mobile}';
 
     /**
      * The console command description.
@@ -25,72 +29,92 @@ class InstallAppCommand extends Command
     protected $description = 'This Command Will Install App.';
 
     /**
-     * Create a new command instance.
-     */
-    public function __construct()
-    {
-        parent::__construct();
-    }
-
-    /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(): int
     {
+        $this->components->info('Starting HadoSaaS installation...');
 
-        Artisan::call('key:generate');
-
-        Artisan::call('migrate');
-
-        $sqlFilePath = module_path('Core', 'database/db.sql');
-
-        if (file_exists($sqlFilePath)) {
-            DB::unprepared(file_get_contents($sqlFilePath));
+        if (! config('app.key')) {
+            $this->components->task('Generating APP_KEY', function () {
+                Artisan::call('key:generate', ['--force' => true]);
+            });
         } else {
-            $this->error('SQL file not found at path: '.$sqlFilePath);
-            Artisan::call('migrate:rollback');
+            $this->line('APP_KEY already exists, skipping key generation.');
+        }
+
+        $this->runMigrations();
+
+        if (! $this->option('skip-sql')) {
+            if (! $this->importCoreSqlDump()) {
+                return self::FAILURE;
+            }
+        }
+
+        $this->bootstrapAdmin();
+
+        $this->newLine();
+        $this->components->info('Application installed successfully.');
+        $this->components->twoColumnDetail('Admin Email', $this->option('admin-email'));
+        $this->components->twoColumnDetail('Admin Password', $this->option('admin-password'));
+
+        return self::SUCCESS;
+    }
+
+    private function runMigrations(): void
+    {
+        if ($this->option('fresh')) {
+            $this->components->task('Running migrate:fresh', function () {
+                Artisan::call('migrate:fresh', ['--force' => true]);
+                $this->output->write(Artisan::output());
+            });
 
             return;
         }
 
-        $role = Role::create([
-            'name' => 'Admin',
-            'guard_name' => 'web',
-        ]);
-        $role->syncPermissions(Permission::all());
-        $user = User::create([
-            'name' => 'Admin',
-            'email' => 'admin@example.com',
-            'password' => Hash::make('12345678'),
-            'mobile' => '0905000000000',
-            'type' => 'admin',
-
-        ]);
-
-        $role->users()->attach($user);
-        $this->alert('✅ Application installed successfully!');
-        $this->alert("🔐 Login credentials:\nEmail: admin@example.com\nPassword: 12345678");
-        $this->alert('✨ Developed with care by Hadi Hilal');
-
+        $this->components->task('Running migrations', function () {
+            Artisan::call('migrate', ['--force' => true]);
+            $this->output->write(Artisan::output());
+        });
     }
 
-    /**
-     * Get the console command arguments.
-     */
-    protected function getArguments(): array
+    private function importCoreSqlDump(): bool
     {
-        return [
-            ['example', InputArgument::REQUIRED, 'An example argument.'],
-        ];
+        $sqlFilePath = module_path('Core', 'database/db.sql');
+        if (! file_exists($sqlFilePath)) {
+            $this->components->error('SQL file not found at path: '.$sqlFilePath);
+
+            return false;
+        }
+
+        $this->components->task('Importing Core SQL dump', function () use ($sqlFilePath) {
+            DB::unprepared(file_get_contents($sqlFilePath));
+        });
+
+        return true;
     }
 
-    /**
-     * Get the console command options.
-     */
-    protected function getOptions(): array
+    private function bootstrapAdmin(): void
     {
-        return [
-            ['example', null, InputOption::VALUE_OPTIONAL, 'An example option.', null],
-        ];
+        DB::transaction(function () {
+            $role = Role::firstOrCreate([
+                'name' => 'Admin',
+                'guard_name' => 'web',
+            ]);
+            $role->syncPermissions(Permission::all());
+
+            $user = User::query()->updateOrCreate([
+                'email' => $this->option('admin-email'),
+            ], [
+                'name' => $this->option('admin-name'),
+                'password' => Hash::make((string) $this->option('admin-password')),
+                'mobile' => $this->option('admin-mobile'),
+                'type' => 'admin',
+            ]);
+
+            if (! $user->hasRole($role->name)) {
+                $user->assignRole($role);
+            }
+        });
     }
 }

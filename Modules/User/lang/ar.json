@@ -52,5 +52,11 @@
     "Logs Management": "إدارة السجلات",
     "CMS Management": "إدارة CMS",
     "Support Management": "إدارة الدعم",
-    "App Monitoring" : "مراقبة التطبيق"
+    "App Monitoring" : "مراقبة التطبيق",
+    "Profile updated successfully": "تم تحديث الملف الشخصي بنجاح",
+    "Change profile image": "تغيير صورة الملف الشخصي",
+    "Allowed file types: png, jpg, jpeg, webp": "أنواع الملفات المسموحة: png, jpg, jpeg, webp",
+    "New Password": "كلمة المرور الجديدة",
+    "Cancel": "إلغاء",
+    "Remove": "حذف"
 }

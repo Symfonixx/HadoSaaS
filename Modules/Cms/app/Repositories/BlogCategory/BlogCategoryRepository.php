@@ -13,7 +13,7 @@ interface BlogCategoryRepository
 
     public function store(array $data): mixed;
 
-    public function update(array $data, BlogCategory $category): mixed;
+    public function update(array $data, BlogCategory $category, bool $updateTranslations = false): mixed;
 
     public function deleteMulti(array $ids): ?bool;
 }

@@ -10,7 +10,7 @@ interface PageRepository
     /**
      * Get all pages with pagination.
      */
-    public function all(array $columns = ['*']): LengthAwarePaginator;
+    public function all(array $columns = ['*'], array $filters = []): LengthAwarePaginator;
 
     /**
      * Find a page by its ID.
@@ -25,7 +25,7 @@ interface PageRepository
     /**
      * Update an existing page.
      */
-    public function update(array $data, Page $page): mixed;
+    public function update(array $data, Page $page, bool $updateTranslations = false): mixed;
 
     /**
      * Delete multiple pages by their IDs.

@@ -5,27 +5,27 @@ namespace Modules\Cms\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Modules\Cms\Application\Blog\BlogApplicationService;
+use Modules\Cms\Application\Blog\Commands\UpsertBlogCommand;
+use Modules\Cms\Application\Shared\Queries\ContentListQuery;
 use Modules\Cms\Data\BlogData;
 use Modules\Cms\Models\Blog;
-use Modules\Cms\Models\BlogCategory;
-use Modules\Cms\Repositories\Blog\BlogRepository;
 use Modules\Core\Http\Requests\DeleteMultiRequest;
 use Modules\User\Enums\CmsStatus;
 
 class BlogController extends Controller
 {
-    protected BlogRepository $blogRepository;
-
-    public function __construct(BlogRepository $blogRepository)
+    public function __construct(private readonly BlogApplicationService $blogService)
     {
-        $this->blogRepository = $blogRepository;
         $this->setActive('cms');
         $this->setActive('blogs');
     }
 
     public function index()
     {
-        $model = $this->blogRepository->all([
+        $model = $this->blogService->paginate(new ContentListQuery(
+            publish: request()->query('publish')
+        ), [
             'id', 'title', 'slug', 'image', 'status', 'featured', 'visits', 'category_id', 'created_at',
         ]);
 
@@ -34,7 +34,7 @@ class BlogController extends Controller
 
     public function create()
     {
-        $categories = BlogCategory::all();
+        $categories = $this->blogService->categories();
 
         return view('cms::admin.blog.create', compact('categories'));
     }
@@ -52,20 +52,22 @@ class BlogController extends Controller
             'featured' => $request->boolean('featured'),
             'category_id' => $request->input('category_id'),
         ]);
-        $this->blogRepository->store($data);
+        $this->blogService->store(UpsertBlogCommand::fromValidated($data));
 
         return redirect()->route('admin.blogs.index');
     }
 
     public function edit(Blog $blog)
     {
-        $categories = BlogCategory::all();
+        $categories = $this->blogService->categories();
 
         return view('cms::admin.blog.edit', compact('blog', 'categories'));
     }
 
     public function update(Request $request, Blog $blog): RedirectResponse
     {
+        $updateTranslations = $request->boolean('update_translations');
+
         $data = BlogData::validate([
             'title' => $request->input('title'),
             'slug' => $blog->slug,
@@ -77,14 +79,14 @@ class BlogController extends Controller
             'featured' => $request->boolean('featured'),
             'category_id' => $request->input('category_id'),
         ]);
-        $this->blogRepository->update($data, $blog);
+        $this->blogService->update($blog, UpsertBlogCommand::fromValidated($data, $updateTranslations));
 
         return redirect()->route('admin.blogs.index');
     }
 
     public function deleteMulti(DeleteMultiRequest $request): RedirectResponse
     {
-        $this->blogRepository->deleteMulti($request->input('ids'));
+        $this->blogService->deleteMulti($request->input('ids'));
 
         return back();
     }

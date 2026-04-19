@@ -4,11 +4,11 @@ namespace Modules\Support\app\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Modules\Core\Http\Requests\DeleteMultiRequest;
-use Modules\Support\Models\Subscriber;
+use Modules\Support\Application\SupportAdmin\SupportInboxApplicationService;
 
 class SubscriberController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly SupportInboxApplicationService $supportInboxService)
     {
         $this->setActive('support');
         $this->setActive('subscribers');
@@ -16,15 +16,14 @@ class SubscriberController extends Controller
 
     public function index()
     {
-        $model = Subscriber::latest()->paginate(config('core.page_size'));
+        $model = $this->supportInboxService->paginateSubscribers();
 
         return view('support::admin.subscriber.index', compact('model'));
     }
 
     public function deleteMulti(DeleteMultiRequest $request)
     {
-        Subscriber::destroy($request->ids);
-        session()->flushMessage(true);
+        $this->supportInboxService->deleteSubscribers($request->ids);
 
         return redirect()->back();
     }

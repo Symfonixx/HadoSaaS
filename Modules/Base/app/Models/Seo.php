@@ -45,19 +45,22 @@ class Seo extends Model
     /**
      * Set SEO value by key.
      */
-    public static function set(string $key, string $value): bool
+    public static function set(string $key, string $value, bool $updateTranslations = true): bool
     {
         $seo = self::getAllSeoEntries();
 
         $model = $seo->firstWhere('key', $key);
 
-        $translations = [app()->getLocale() => $value];
+        $translations = $model?->getTranslations('value') ?? [];
+        $translations[app()->getLocale()] = $value;
 
-        foreach (otherLangs() as $lang) {
-            try {
-                $translations[$lang] = autoGoogleTranslator($lang, $value);
-            } catch (Exception $e) {
-                session()->flushMessage(false, $e->getMessage(), $e);
+        if ($updateTranslations) {
+            foreach (otherLangs() as $lang) {
+                try {
+                    $translations[$lang] = autoGoogleTranslator($lang, $value);
+                } catch (Exception $e) {
+                    session()->flushMessage(false, $e->getMessage(), $e);
+                }
             }
         }
 

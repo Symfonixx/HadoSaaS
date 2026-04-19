@@ -5,6 +5,10 @@ namespace Modules\Core\Providers;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Modules\Core\Console\InstallAppCommand;
+use Modules\Core\Contracts\Flash\FlashMessengerInterface;
+use Modules\Core\Contracts\Translation\TranslatorInterface;
+use Modules\Core\Services\Flash\SessionFlashMessenger;
+use Modules\Core\Services\Translation\GoogleTranslatorService;
 use Nwidart\Modules\Traits\PathNamespace;
 
 class CoreServiceProvider extends ServiceProvider
@@ -79,6 +83,8 @@ class CoreServiceProvider extends ServiceProvider
     {
         $this->app->register(EventServiceProvider::class);
         $this->app->register(MacroServiceProvider::class);
+        $this->app->bind(TranslatorInterface::class, GoogleTranslatorService::class);
+        $this->app->bind(FlashMessengerInterface::class, SessionFlashMessenger::class);
     }
 
     /**

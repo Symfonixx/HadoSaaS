@@ -4,13 +4,13 @@ namespace Modules\User\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Modules\User\Application\User\UserManagementApplicationService;
 use Modules\User\app\Data\UserData;
-use Modules\User\app\Repositories\User\UserRepository;
 use Modules\User\Http\Requests\StoreUserRequest;
 
 class UserController extends Controller
 {
-    public function __construct(protected UserRepository $userRepository)
+    public function __construct(protected UserManagementApplicationService $userService)
     {
         $this->setActive('hr');
         $this->setActive('users');
@@ -18,7 +18,7 @@ class UserController extends Controller
 
     public function index()
     {
-        $model = $this->userRepository->all('user');
+        $model = $this->userService->paginate('user');
 
         return view('user::.admin.user.index', compact('model'));
     }
@@ -26,24 +26,24 @@ class UserController extends Controller
     public function store(StoreUserRequest $request)
     {
         $userData = UserData::validateAndCreate($request->all());
-        $this->userRepository->store($userData);
+        $this->userService->store($userData);
 
         return redirect()->route('admin.users.index');
     }
 
     public function update(Request $request, $id)
     {
-        $user = $this->userRepository->find($id);
+        $user = $this->userService->find($id);
         $userData = UserData::validateAndCreate($request->all());
-        $this->userRepository->update($userData, $user);
+        $this->userService->update($userData, $user);
 
         return redirect()->route('admin.users.index');
     }
 
     public function destroy($id)
     {
-        $user = $this->userRepository->find($id);
-        $this->userRepository->delete($user);
+        $user = $this->userService->find($id);
+        $this->userService->delete($user);
 
         return response()->json([
             'success' => true,
