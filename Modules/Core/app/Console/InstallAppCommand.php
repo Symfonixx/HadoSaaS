@@ -7,6 +7,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -87,6 +88,12 @@ class InstallAppCommand extends Command
             return false;
         }
 
+        if ($this->coreSeedDataAlreadyImported()) {
+            $this->line('Core SQL data already exists, skipping SQL import.');
+
+            return true;
+        }
+
         $this->components->task('Importing Core SQL dump', function () use ($sqlFilePath) {
             DB::unprepared(file_get_contents($sqlFilePath));
         });
@@ -94,23 +101,47 @@ class InstallAppCommand extends Command
         return true;
     }
 
+    private function coreSeedDataAlreadyImported(): bool
+    {
+        foreach (['countries', 'permissions'] as $table) {
+            if (Schema::hasTable($table) && DB::table($table)->exists()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function bootstrapAdmin(): void
     {
         DB::transaction(function () {
+            $adminEmail = (string) $this->option('admin-email');
+            $adminMobile = (string) $this->option('admin-mobile');
+
             $role = Role::firstOrCreate([
                 'name' => 'Admin',
                 'guard_name' => 'web',
             ]);
             $role->syncPermissions(Permission::all());
 
-            $user = User::query()->updateOrCreate([
-                'email' => $this->option('admin-email'),
-            ], [
+            $userAttributes = [
                 'name' => $this->option('admin-name'),
                 'password' => Hash::make((string) $this->option('admin-password')),
-                'mobile' => $this->option('admin-mobile'),
+                'email' => $adminEmail,
+                'mobile' => $adminMobile,
                 'type' => 'admin',
-            ]);
+            ];
+
+            $user = User::query()
+                ->where('email', $adminEmail)
+                ->orWhere('mobile', $adminMobile)
+                ->first();
+
+            if ($user) {
+                $user->fill($userAttributes)->save();
+            } else {
+                $user = User::query()->create($userAttributes);
+            }
 
             if (! $user->hasRole($role->name)) {
                 $user->assignRole($role);

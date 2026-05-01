@@ -4,22 +4,22 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
-    public function up(): void
-    {
+    public function up(): void {
         Schema::create('pages', function (Blueprint $table) {
             $table->id();
             $table->json('title');
             $table->string('slug')->unique();
-            $table->json('description');
-            $table->json('keywords');
             $table->json('content');
             $table->string('image');
-            $table->enum('status', ['Published', 'Archived'])->default('published');
+            $table->string('meta_image');
+            $table->json('meta_title')->nullable();
+            $table->json('meta_description')->nullable();
+            $table->json('meta_keywords')->nullable();
+            $table->enum('status', ['Published', 'Archived'])->default('Published');
             $table->boolean('featured')->default(true);
             $table->bigInteger('visits')->default(0);
             $table->timestamps();
@@ -29,8 +29,7 @@ return new class extends Migration
     /**
      * Reverse the migrations.
      */
-    public function down(): void
-    {
+    public function down(): void {
         Schema::dropIfExists('pages');
     }
 };

@@ -28,6 +28,8 @@ class PageApplicationService
         $payload = $this->payloadBuilder->build(
             data: $command->payload,
             uploadPath: 'pages',
+            translatableFields: (new Page)->translatable,
+            imageFields: ['image', 'meta_image'],
             updateTranslations: true
         );
 
@@ -41,7 +43,12 @@ class PageApplicationService
         $payload = $this->payloadBuilder->build(
             data: $command->payload,
             uploadPath: 'pages',
-            existingImage: $page->image,
+            translatableFields: $page->translatable,
+            imageFields: ['image', 'meta_image'],
+            existingMedia: [
+                'image' => $page->image,
+                'meta_image' => $page->meta_image,
+            ],
             entity: $page,
             updateTranslations: $command->updateTranslations
         );

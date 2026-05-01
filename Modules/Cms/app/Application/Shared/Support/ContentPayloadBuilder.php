@@ -13,53 +13,81 @@ class ContentPayloadBuilder
 {
     use FileTrait;
 
+    /**
+     * Fields that hold a comma-separated keyword list and need to be normalised
+     * before being persisted. They are still translatable.
+     */
+    private const KEYWORD_FIELDS = ['meta_keywords'];
+
     public function __construct(private readonly TranslatorInterface $translator) {}
 
     /**
-     * @param  array<string, mixed>  $data
+     * Build a payload ready for persistence.
+     *
+     * @param  array<string, mixed>  $data            Raw request data.
+     * @param  string                $uploadPath      Folder used to store uploaded media.
+     * @param  array<int, string>    $translatableFields  List of attributes that should be translated.
+     * @param  array<int, string>    $imageFields     File inputs that should be uploaded as images.
+     * @param  array<string, ?string> $existingMedia  Existing media paths keyed by attribute name.
      * @return array<string, mixed>
      */
-    public function build(array $data, string $uploadPath, ?string $existingImage = null, ?Model $entity = null, bool $updateTranslations = true): array
-    {
-        $keywords = $this->parseKeywords($data['keywords'] ?? null);
+    public function build(
+        array $data,
+        string $uploadPath,
+        array $translatableFields,
+        array $imageFields = ['image'],
+        array $existingMedia = [],
+        ?Model $entity = null,
+        bool $updateTranslations = true
+    ): array {
         $locale = app()->getLocale();
+        $payload = $data;
 
-        $transTitle = $entity?->getTranslations('title') ?? [];
-        $transDescription = $entity?->getTranslations('description') ?? [];
-        $transKeywords = $entity?->getTranslations('keywords') ?? [];
-        $transContent = $entity?->getTranslations('content') ?? [];
+        foreach ($translatableFields as $field) {
+            $rawValue = $data[$field] ?? null;
+            $value = $this->normaliseFieldValue($field, $rawValue);
 
-        $title = (string) $data['title'];
-        $description = (string) ($data['description'] ?? '');
-        $content = (string) $data['content'];
+            $translations = $entity?->getTranslations($field) ?? [];
+            $translations[$locale] = $value;
 
-        $transTitle[$locale] = $title;
-        $transDescription[$locale] = $description;
-        $transKeywords[$locale] = $keywords;
-        $transContent[$locale] = $content;
-
-        if ($updateTranslations) {
-            foreach ($this->translator->otherLanguages() as $language) {
-                try {
-                    $transTitle[$language] = $this->translator->translate($language, $title);
-                    $transDescription[$language] = $this->translator->translate($language, $description);
-                    $transKeywords[$language] = $this->translator->translate($language, $keywords);
-                    $transContent[$language] = $this->translator->translate($language, $content);
-                } catch (Exception $exception) {
-                    Log::error($exception->getMessage());
+            if ($updateTranslations && $value !== '') {
+                foreach ($this->translator->otherLanguages() as $language) {
+                    try {
+                        $translations[$language] = $this->translator->translate($language, $value);
+                    } catch (Exception $exception) {
+                        Log::error($exception->getMessage());
+                    }
                 }
             }
+
+            $payload[$field] = $translations;
         }
 
-        return array_merge($data, [
-            'image' => $this->resolveImagePath($data['image'] ?? null, $uploadPath, $data['slug'], $existingImage),
-            'title' => $transTitle,
-            'description' => $transDescription,
-            'keywords' => $transKeywords,
-            'content' => $transContent,
-            'status' => $data['status'],
-            'featured' => (int) ($data['featured'] ?? false),
-        ]);
+        foreach ($imageFields as $field) {
+            $payload[$field] = $this->resolveImagePath(
+                $data[$field] ?? null,
+                $uploadPath,
+                (string) ($data['slug'] ?? uniqid('media_', true)),
+                $existingMedia[$field] ?? null
+            );
+        }
+
+        $payload['featured'] = (int) ($data['featured'] ?? false);
+
+        if (isset($data['status'])) {
+            $payload['status'] = $data['status'];
+        }
+
+        return $payload;
+    }
+
+    private function normaliseFieldValue(string $field, mixed $rawValue): string
+    {
+        if (in_array($field, self::KEYWORD_FIELDS, true)) {
+            return $this->parseKeywords($rawValue);
+        }
+
+        return (string) ($rawValue ?? '');
     }
 
     private function resolveImagePath(?UploadedFile $image, string $uploadPath, string $slug, ?string $existingImage): ?string

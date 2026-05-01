@@ -1,5 +1,5 @@
 @push('scripts')
-    <script src="https://cdn.tiny.cloud/1/{{Config::get('core.tinymce_key')}}/tinymce/6/tinymce.min.js"
+    <script src="https://cdn.tiny.cloud/1/{{Config::get('core.tinymce_key')}}/tinymce/8/tinymce.min.js"
             referrerpolicy="origin"></script>
 @endpush
 
@@ -7,7 +7,7 @@
     $(document).ready(function (e) {
 
         tinymce.init({
-            selector: 'textarea',
+            selector: '#tinymce',
             height: 750,
             plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount',
             toolbar: 'undo redo | blocks  fontsize | bold italic underline strikethrough | link image media table mergetags | align lineheight | tinycomments | checklist numlist bullist indent outdent | emoticons charmap | removeformat',

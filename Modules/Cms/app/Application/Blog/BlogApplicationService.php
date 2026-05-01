@@ -29,6 +29,8 @@ class BlogApplicationService
         $payload = $this->payloadBuilder->build(
             data: $command->payload,
             uploadPath: 'blogs',
+            translatableFields: (new Blog)->translatable,
+            imageFields: ['image', 'meta_image'],
             updateTranslations: true
         );
 
@@ -42,7 +44,12 @@ class BlogApplicationService
         $payload = $this->payloadBuilder->build(
             data: $command->payload,
             uploadPath: 'blogs',
-            existingImage: $blog->image,
+            translatableFields: $blog->translatable,
+            imageFields: ['image', 'meta_image'],
+            existingMedia: [
+                'image' => $blog->image,
+                'meta_image' => $blog->meta_image,
+            ],
             entity: $blog,
             updateTranslations: $command->updateTranslations
         );

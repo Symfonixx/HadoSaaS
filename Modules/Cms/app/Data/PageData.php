@@ -15,29 +15,34 @@ use Spatie\LaravelData\Data;
 class PageData extends Data
 {
     public function __construct(
-
         #[Required, StringType, Rule('min:2', 'max:255')]
         public string $title,
 
         #[Required, StringType, Rule('min:2', 'max:255')]
         public string $slug,
 
-        #[Nullable, StringType, Rule('max:255')]
-        public ?string $description,
-
         #[Required, StringType]
         public string $content,
 
-        #[Nullable, StringType, Rule('max:255')]
-        public ?string $keywords = null,
+        #[Nullable, StringType, Rule('max:70')]
+        public ?string $meta_title = null,
 
-        #[Nullable, File, Rule('mimes:jpeg,jpg,png,gif', 'max:2048')]
+        #[Nullable, StringType, Rule('max:255')]
+        public ?string $meta_description = null,
+
+        #[Nullable, StringType, Rule('max:255')]
+        public ?string $meta_keywords = null,
+
+        #[Nullable, File, Rule('mimes:jpeg,jpg,png,gif,webp', 'max:2048')]
         public ?UploadedFile $image = null,
+
+        #[Nullable, File, Rule('mimes:jpeg,jpg,png,gif,webp', 'max:2048')]
+        public ?UploadedFile $meta_image = null,
 
         #[Nullable]
         public CmsStatus $status = CmsStatus::PUBLISHED,
 
         #[Nullable, BooleanType]
-        public ?bool $featured = false
+        public ?bool $featured = false,
     ) {}
 }
