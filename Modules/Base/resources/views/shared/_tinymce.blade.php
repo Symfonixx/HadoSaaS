@@ -14,6 +14,21 @@
             tinycomments_mode: 'embedded',
             tinycomments_author: 'Author name',
             @if(app()->getLocale() == 'ar') language: 'ar', @endif
+            file_picker_types: 'image',
+            file_picker_callback: function (callback, value, meta) {
+                if (meta.filetype === 'image' && typeof window.openMediaLibraryForTinyMce === 'function') {
+                    window.openMediaLibraryForTinyMce({
+                        insertContent: function (html) {
+                            var parser = new DOMParser();
+                            var doc = parser.parseFromString(html, 'text/html');
+                            var image = doc.querySelector('img');
+                            if (image) {
+                                callback(image.getAttribute('src'), {alt: image.getAttribute('alt') || ''});
+                            }
+                        }
+                    });
+                }
+            },
             ai_request: (request, respondWith) => respondWith.string(() => Promise.reject("See docs to implement AI Assistant")),
         });
     });

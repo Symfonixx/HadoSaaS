@@ -17,40 +17,10 @@
             <!--begin::Col-->
             <div class="col-xl-3 mb-5">
                 <div class="fs-6 fw-bold mt-2 mb-5">{{__('Transparent Logo')}}</div>
-                <!--begin::Image input-->
-                <div class="image-input image-input-outline" data-kt-image-input="true">
-                    <!--begin::Preview existing avatar-->
-                    <div class="image-input-wrapper w-125px h-125px bgi-position-center"
-                         style="background-size: 75%; background-image: url('{{asset('storage/' .$settings->get('white_logo' ,'default.jpg'))}}')"></div>
-                    <!--end::Preview existing avatar-->
-                    <!--begin::Label-->
-                    <label
-                        class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-white shadow"
-                        data-kt-image-input-action="change" data-bs-toggle="tooltip"
-                        title="{{__('Change avatar')}}">
-                        <i class="bi bi-pencil-fill fs-7"></i>
-                        <!--begin::Inputs-->
-                        <input type="file" name="imgs[white_logo]" accept=".png, .jpg, .jpeg, .webp"/>
-                        <input type="hidden" name="avatar_remove"/>
-                        <!--end::Inputs-->
-                    </label>
-                    <!--end::Label-->
-                    <!--begin::Cancel-->
-                    <span class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-white shadow"
-                          data-kt-image-input-action="cancel" data-bs-toggle="tooltip"
-                          title="{{__('Cancel avatar')}}">
-                                <i class="bi bi-x fs-2"></i>
-                            </span>
-                    <!--end::Cancel-->
-                    <!--begin::Remove-->
-                    <span class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-white shadow"
-                          data-kt-image-input-action="remove" data-bs-toggle="tooltip"
-                          title="{{__('Remove avatar')}}">
-                                <i class="bi bi-x fs-2"></i>
-                            </span>
-                    <!--end::Remove-->
-                </div>
-                <!--end::Image input-->
+                <x-admin.image-input
+                    name="imgs[white_logo]"
+                    :preview="asset('storage/' . $settings->get('white_logo' ,'default.jpg'))"
+                    mediaInputName="imgs_media[white_logo]"/>
                 <!--begin::Hint-->
                 <div class="form-text"> 75px * 150px</div>
                 <!--end::Hint-->
@@ -60,40 +30,10 @@
             <!--begin::Col-->
             <div class="col-xl-3 mb-5">
                 <div class="fs-6 fw-bold mt-2 mb-5">{{__('Dark Logo')}}</div>
-                <!--begin::Image input-->
-                <div class="image-input image-input-outline" data-kt-image-input="true">
-                    <!--begin::Preview existing avatar-->
-                    <div class="image-input-wrapper w-125px h-125px bgi-position-center"
-                         style="background-size: 75%; background-image: url('{{asset('storage/' .$settings->get('black_logo' ,'default.jpg'))}}')"></div>
-                    <!--end::Preview existing avatar-->
-                    <!--begin::Label-->
-                    <label
-                        class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-white shadow"
-                        data-kt-image-input-action="change" data-bs-toggle="tooltip"
-                        title="{{__('Change avatar')}}">
-                        <i class="bi bi-pencil-fill fs-7"></i>
-                        <!--begin::Inputs-->
-                        <input type="file" name="imgs[black_logo]" accept=".png, .jpg, .jpeg, .webp"/>
-                        <input type="hidden" name="avatar_remove"/>
-                        <!--end::Inputs-->
-                    </label>
-                    <!--end::Label-->
-                    <!--begin::Cancel-->
-                    <span class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-white shadow"
-                          data-kt-image-input-action="cancel" data-bs-toggle="tooltip"
-                          title="{{__('Cancel avatar')}}">
-                                <i class="bi bi-x fs-2"></i>
-                            </span>
-                    <!--end::Cancel-->
-                    <!--begin::Remove-->
-                    <span class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-white shadow"
-                          data-kt-image-input-action="remove" data-bs-toggle="tooltip"
-                          title="{{__('Remove avatar')}}">
-                                <i class="bi bi-x fs-2"></i>
-                            </span>
-                    <!--end::Remove-->
-                </div>
-                <!--end::Image input-->
+                <x-admin.image-input
+                    name="imgs[black_logo]"
+                    :preview="asset('storage/' . $settings->get('black_logo' ,'default.jpg'))"
+                    mediaInputName="imgs_media[black_logo]"/>
                 <!--begin::Hint-->
                 <div class="form-text"> 238px * 51px</div>
                 <!--end::Hint-->
@@ -102,40 +42,10 @@
             <!--begin::Col-->
             <div class="col-xl-3 mb-5">
                 <div class="fs-6 fw-bold mt-2 mb-5">{{__('Meta Image')}}</div>
-                <!--begin::Image input-->
-                <div class="image-input image-input-outline" data-kt-image-input="true">
-                    <!--begin::Preview existing avatar-->
-                    <div class="image-input-wrapper w-125px h-125px bgi-position-center"
-                         style="background-size: 75%; background-image: url('{{asset('storage/' .$settings->get('meta_img' ,'default.jpg') )}}')"></div>
-                    <!--end::Preview existing avatar-->
-                    <!--begin::Label-->
-                    <label
-                        class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-white shadow"
-                        data-kt-image-input-action="change" data-bs-toggle="tooltip"
-                        title="{{__('Change avatar')}}">
-                        <i class="bi bi-pencil-fill fs-7"></i>
-                        <!--begin::Inputs-->
-                        <input type="file" name="imgs[meta_img]" accept=".png, .jpg, .jpeg, .webp"/>
-                        <input type="hidden" name="avatar_remove"/>
-                        <!--end::Inputs-->
-                    </label>
-                    <!--end::Label-->
-                    <!--begin::Cancel-->
-                    <span class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-white shadow"
-                          data-kt-image-input-action="cancel" data-bs-toggle="tooltip"
-                          title="{{__('Cancel avatar')}}">
-                                <i class="bi bi-x fs-2"></i>
-                            </span>
-                    <!--end::Cancel-->
-                    <!--begin::Remove-->
-                    <span class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-white shadow"
-                          data-kt-image-input-action="remove" data-bs-toggle="tooltip"
-                          title="{{__('Remove avatar')}}">
-                                <i class="bi bi-x fs-2"></i>
-                            </span>
-                    <!--end::Remove-->
-                </div>
-                <!--end::Image input-->
+                <x-admin.image-input
+                    name="imgs[meta_img]"
+                    :preview="asset('storage/' . $settings->get('meta_img' ,'default.jpg'))"
+                    mediaInputName="imgs_media[meta_img]"/>
                 <!--begin::Hint-->
                 <div class="form-text"> 600px * 600px</div>
                 <!--end::Hint-->

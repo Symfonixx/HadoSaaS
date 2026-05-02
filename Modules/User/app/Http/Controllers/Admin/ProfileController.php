@@ -38,6 +38,8 @@ class ProfileController extends Controller
                 name: 'avatar-'.$user->id,
                 old: $user->img
             );
+        } elseif ($request->filled('img_media_path')) {
+            $data['img'] = (string) $request->input('img_media_path');
         }
 
         $user->update($data);

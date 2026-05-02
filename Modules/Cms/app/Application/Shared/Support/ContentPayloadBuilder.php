@@ -90,8 +90,12 @@ class ContentPayloadBuilder
         return (string) ($rawValue ?? '');
     }
 
-    private function resolveImagePath(?UploadedFile $image, string $uploadPath, string $slug, ?string $existingImage): ?string
+    private function resolveImagePath(UploadedFile|string|null $image, string $uploadPath, string $slug, ?string $existingImage): ?string
     {
+        if (is_string($image) && trim($image) !== '') {
+            return $image;
+        }
+
         if (! $image) {
             return $existingImage;
         }

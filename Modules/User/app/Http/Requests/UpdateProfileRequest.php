@@ -24,6 +24,7 @@ class UpdateProfileRequest extends FormRequest
 
         return [
             'img' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:1048',
+            'img_media_path' => 'nullable|string',
             'name' => 'required|string|min:3|max:50',
             'email' => [
                 'required',

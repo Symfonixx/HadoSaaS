@@ -100,6 +100,31 @@
 
         </div>
 
+        <div class="menu-sub menu-sub-accordion {{ isset($active['faqs'])  ? 'show' : '' }}">
+            <div class="menu-item">
+                <a class="menu-link {{ isset($active['faqs']) ? 'active' : '' }}"
+                   href="{{ route('admin.faqs.index') }}">
+                            <span class="menu-bullet">
+                                <span class="bullet bullet-dot"></span>
+                            </span>
+                    <span class="menu-title">{{ __('FAQs') }}</span>
+                </a>
+            </div>
+
+        </div>
+
+    </div>
+@endcan
+
+@can('Media Library Management')
+    <div class="menu-item">
+        <a class="menu-link {{ isset($active['media_library']) ? 'active' : '' }}"
+           href="{{ route('admin.media_library.index') }}">
+                <span class="menu-icon">
+                    <i class="bi bi-images"></i>
+                </span>
+            <span class="menu-title">{{ __('Media Library') }}</span>
+        </a>
     </div>
 @endcan
 

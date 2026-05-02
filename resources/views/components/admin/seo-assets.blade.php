@@ -227,12 +227,23 @@
                 // ====================================================
                 //  Search-listing preview
                 // ====================================================
-                function safeQuery(selector) {
+                function safeQuery(selector, root) {
                     if (!selector) return null;
+                    var scope = root && root.querySelector ? root : document;
                     try {
-                        return document.querySelector(selector);
+                        return scope.querySelector(selector);
                     } catch (e) {
                         return null;
+                    }
+                }
+
+                function safeQueryAll(selector, root) {
+                    if (!selector) return [];
+                    var scope = root && root.querySelector ? root : document;
+                    try {
+                        return Array.prototype.slice.call(scope.querySelectorAll(selector));
+                    } catch (e) {
+                        return [];
                     }
                 }
 
@@ -288,17 +299,24 @@
                     return targetEl.value || '';
                 }
 
-                function evaluateCheck(check) {
+                function evaluateCheck(check, root) {
+                    var scope = root && root.querySelector ? root : document;
                     var rule = check.dataset.seoRule;
                     var min = parseInt(check.dataset.seoMin || '0', 10);
                     var max = parseInt(check.dataset.seoMax || '0', 10);
                     var hardMax = parseInt(check.dataset.seoHardMax || '0', 10);
-                    var target = safeQuery(check.dataset.seoTarget);
+                    var target = safeQuery(check.dataset.seoTarget, scope);
 
                     if (rule === 'image') {
                         var hasInitial = check.dataset.seoInitial === '1';
-                        var hasFile = target && target.files && target.files.length > 0;
-                        if (hasFile || hasInitial) {
+                        var targets = safeQueryAll(check.dataset.seoTarget, scope);
+                        var hasFile = targets.some(function (item) {
+                            return item && item.files && item.files.length > 0;
+                        });
+                        var hasValue = targets.some(function (item) {
+                            return item && item.value && String(item.value).trim().length > 0;
+                        });
+                        if (hasFile || hasValue || hasInitial) {
                             return { state: 'success', label: I18N.added };
                         }
                         return { state: 'danger', label: I18N.missing };
@@ -333,6 +351,18 @@
                     if (min > 0 && length < min) return { state: 'warning', label: I18N.tooShort, length: length, unit: I18N.characters };
                     if (max > 0 && length > max) return { state: 'warning', label: I18N.tooLong, length: length, unit: I18N.characters };
                     return { state: 'success', label: I18N.ok, length: length, unit: I18N.characters };
+                }
+
+                /** 0–1 fraction for the donut score (warnings count partial credit so RTL / Arabic is not stuck at 0). */
+                function scoreFractionForCheck(result, rule) {
+                    if (result.state === 'success') return 1;
+                    if (result.state === 'warning') return 0.65;
+                    if (result.state === 'empty') return 0;
+                    if (result.state === 'danger') {
+                        if (rule === 'image' || rule === 'presence') return 0;
+                        return 0.25;
+                    }
+                    return 0;
                 }
 
                 var STATE_CLASSES = ['is-success', 'is-warning', 'is-danger', 'is-empty'];
@@ -400,21 +430,20 @@
                         var checks = Array.prototype.slice.call(card.querySelectorAll('[data-seo-check]'));
                         if (checks.length === 0) return;
                         var donut = card.querySelector('[data-seo-score-summary]');
+                        var formRoot = card.closest('form');
 
                         function recompute() {
-                            var success = 0;
-                            var counted = 0;
+                            var totalFrac = 0;
                             checks.forEach(function (check) {
-                                var result = evaluateCheck(check);
+                                var result = evaluateCheck(check, formRoot);
                                 paintCheck(check, result);
-                                counted++;
-                                if (result.state === 'success') success++;
+                                totalFrac += scoreFractionForCheck(result, check.dataset.seoRule);
                             });
-                            var score = counted === 0 ? 0 : Math.round((success / counted) * 100);
+                            var score = checks.length === 0 ? 0 : Math.round((totalFrac / checks.length) * 100);
                             if (donut) paintScore(donut, score);
                         }
 
-                        var form = card.closest('form') || document;
+                        var form = formRoot || document;
                         ['input', 'change'].forEach(function (evt) {
                             form.addEventListener(evt, recompute, true);
                         });

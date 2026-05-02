@@ -432,8 +432,8 @@ Author: Hadi Hilal
                         class="app-container container-fluid d-flex flex-column flex-md-row flex-center flex-md-stack py-3">
                         <!--begin::Copyright-->
                         <div class="text-dark order-2 order-md-1">
-                            <span class="text-muted fw-bold me-1">{{__('All rights are reserved')}} 2024©</span>
-                            <a href="https://www.linkedin.com/in/hadi-hilal" target="_blank"
+                            <span class="text-muted fw-bold me-1">{{__('All rights are reserved')}} 2026©</span>
+                            <a href="https://symfonix.io" target="_blank"
                                class="text-gray-700 text-hover-primary">{{__('Developed By Hadi Hilal')}} </a>
                         </div>
                         <!--end::Copyright-->
@@ -455,6 +455,7 @@ Author: Hadi Hilal
 
     <!--end::Page-->
     @yield('modal')
+    <x-admin.media-library-modal></x-admin.media-library-modal>
 </div>
 <!--end::Root-->
 

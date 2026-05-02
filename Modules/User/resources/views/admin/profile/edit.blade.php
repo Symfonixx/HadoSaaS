@@ -19,26 +19,7 @@
                 <div class="fs-6 fw-bold mt-2 mb-3">{{__('Image')}}</div>
             </div>
             <div class="col-xl-9 fv-row">
-                <div class="image-input image-input-outline" data-kt-image-input="true"
-                     style="background-image: url('{{asset('images/avatar.png')}}')">
-                    <div class="image-input-wrapper w-125px h-125px bgi-position-center"
-                         style="background-size: cover; background-image: url({{$user->avatar}})"></div>
-                    <label class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-white shadow"
-                           data-kt-image-input-action="change" data-bs-toggle="tooltip"
-                           title="{{__('Change profile image')}}">
-                        <i class="bi bi-pencil-fill fs-7"></i>
-                        <input type="file" name="img" accept=".png, .jpg, .jpeg, .webp"/>
-                        <input type="hidden" name="avatar_remove"/>
-                    </label>
-                    <span class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-white shadow"
-                          data-kt-image-input-action="cancel" data-bs-toggle="tooltip" title="{{__('Cancel')}}">
-                        <i class="bi bi-x fs-2"></i>
-                    </span>
-                    <span class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-white shadow"
-                          data-kt-image-input-action="remove" data-bs-toggle="tooltip" title="{{__('Remove')}}">
-                        <i class="bi bi-x fs-2"></i>
-                    </span>
-                </div>
+                <x-admin.image-input name="img" :preview="$user->avatar"/>
                 <div class="form-text">{{__('Allowed file types: png, jpg, jpeg, webp')}}</div>
             </div>
         </div>

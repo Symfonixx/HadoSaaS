@@ -25,13 +25,20 @@ class SettingsApplicationService
     /**
      * @param  array<string, UploadedFile>  $images
      * @param  array<string, mixed>  $data
+     * @param  array<string, string|null>  $mediaPaths
      */
-    public function update(array $images = [], array $data = []): void
+    public function update(array $images = [], array $data = [], array $mediaPaths = []): void
     {
         foreach ($images as $key => $file) {
             $oldFile = $this->settingsRepository->get($key);
             $path = $this->upload($file, 'settings', $key, $oldFile ?: null);
             $this->settingsRepository->set($key, $path);
+        }
+
+        foreach ($mediaPaths as $key => $path) {
+            if (is_string($path) && trim($path) !== '') {
+                $this->settingsRepository->set((string) $key, trim($path));
+            }
         }
 
         foreach ($data as $key => $value) {

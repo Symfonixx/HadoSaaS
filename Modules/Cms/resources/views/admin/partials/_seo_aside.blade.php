@@ -58,14 +58,14 @@
             'hint' => '3–8 relevant keywords.',
         ],
         [
-            'target' => "input[name='img']",
+            'target' => "input[name='img'], input[name='img_media_path']",
             'rule' => 'image',
             'initial' => $hasFeaturedImage ? '1' : '',
             'label' => 'Featured image',
             'hint' => '900×600 recommended.',
         ],
         [
-            'target' => "input[name='meta_img']",
+            'target' => "input[name='meta_img'], input[name='meta_img_media_path']",
             'rule' => 'image',
             'initial' => $hasMetaImage ? '1' : '',
             'label' => 'Social share image',

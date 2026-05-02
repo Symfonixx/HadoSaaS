@@ -1,6 +1,18 @@
 @if(isset($modal) && $modal)
 @php
-    $langs = config('translatable.locales', ['en']);
+    $supported = array_keys(config('laravellocalization.supportedLocales', []));
+    $langs = collect($supported)->isEmpty()
+        ? ['en']
+        : collect($supported)->sort(function ($a, $b) {
+            if ($a === 'en') {
+                return -1;
+            }
+            if ($b === 'en') {
+                return 1;
+            }
+
+            return strcmp((string) $a, (string) $b);
+        })->values()->all();
 @endphp
 <!-- Edit Category Modal -->
 <div class="modal fade" id="editCategoryModal{{$blogs_category->id}}" tabindex="-1" aria-labelledby="editCategoryModalLabel{{$blogs_category->id}}" aria-hidden="true">
@@ -11,18 +23,33 @@
                 @method('PUT')
                 <div class="modal-header">
                     <h5 class="modal-title" id="editCategoryModalLabel{{$blogs_category->id}}">{{ __('Edit Category') }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('Close') }}"></button>
                 </div>
                 <div class="modal-body">
                     @foreach($langs as $lang)
                         <div class="mb-3">
-                            <label for="name_{{$lang}}" class="form-label">{{ __('Name') }} ({{ strtoupper($lang) }})</label>
-                            <input type="text" class="form-control" name="name[{{$lang}}]" value="{{ $blogs_category->getTranslation('name', $lang, false) }}" required>
+                            <label for="name_{{$blogs_category->id}}_{{$lang}}" class="form-label">
+                                {{ __('Name') }}
+                                @if($lang === 'en')
+                                    <span class="text-muted">({{ __('English') }})</span>
+                                @else
+                                    ({{ strtoupper($lang) }})
+                                @endif
+                            </label>
+                            <input id="name_{{$blogs_category->id}}_{{$lang}}"
+                                   type="text"
+                                   class="form-control"
+                                   lang="{{ $lang === 'ar' ? 'ar' : 'en' }}"
+                                   dir="{{ $lang === 'ar' ? 'rtl' : 'ltr' }}"
+                                   name="name[{{$lang}}]"
+                                   value="{{ old('name.'.$lang, $blogs_category->getTranslation('name', $lang, false)) }}"
+                                   @if($lang === 'en') required @endif>
                         </div>
                     @endforeach
                     <div class="mb-3">
-                        <label for="slug" class="form-label">{{ __('Slug') }}</label>
-                        <input type="text" class="form-control" name="slug" value="{{$blogs_category->slug}}" required readonly>
+                        <label for="slug_readonly_{{ $blogs_category->id }}" class="form-label">{{ __('Slug') }}</label>
+                        <input id="slug_readonly_{{ $blogs_category->id }}" type="text" class="form-control" name="slug"
+                               value="{{ $blogs_category->slug }}" required readonly>
                     </div>
                     <div class="mb-3">
                         <div class="form-check form-check-custom form-check-solid">
@@ -36,7 +63,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Close') }}</button>
-                    <button type="submit" class="btn btn-primary">{{ __('Save Changes') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ __('Save and Close') }}</button>
                 </div>
             </form>
         </div>
