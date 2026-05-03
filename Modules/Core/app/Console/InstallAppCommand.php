@@ -103,13 +103,10 @@ class InstallAppCommand extends Command
 
     private function coreSeedDataAlreadyImported(): bool
     {
-        foreach (['countries', 'permissions'] as $table) {
-            if (Schema::hasTable($table) && DB::table($table)->exists()) {
-                return true;
-            }
-        }
-
-        return false;
+        // Only treat Core SQL as imported when seed data that lives exclusively in db.sql is present.
+        // Do not use `permissions`: migrations may insert rows before import (e.g. module permissions),
+        // which would skip the dump and leave Admin with only those migration-defined permissions.
+        return Schema::hasTable('countries') && DB::table('countries')->exists();
     }
 
     private function bootstrapAdmin(): void
