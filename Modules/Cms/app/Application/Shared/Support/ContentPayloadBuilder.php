@@ -2,10 +2,8 @@
 
 namespace Modules\Cms\Application\Shared\Support;
 
-use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Log;
 use Modules\Core\Contracts\Translation\TranslatorInterface;
 use Modules\Core\Traits\FileTrait;
 
@@ -52,11 +50,7 @@ class ContentPayloadBuilder
 
             if ($updateTranslations && $value !== '') {
                 foreach ($this->translator->otherLanguages() as $language) {
-                    try {
-                        $translations[$language] = $this->translator->translate($language, $value);
-                    } catch (Exception $exception) {
-                        Log::error($exception->getMessage());
-                    }
+                    $translations[$language] = $this->translator->translate($language, $value);
                 }
             }
 

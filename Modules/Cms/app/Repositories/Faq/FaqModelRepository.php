@@ -5,12 +5,9 @@ namespace Modules\Cms\Repositories\Faq;
 use Config;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Modules\Cms\Models\Faq;
-use Modules\Core\Traits\ExceptionHandlerTrait;
 
 class FaqModelRepository implements FaqRepository
 {
-    use ExceptionHandlerTrait;
-
     public function all(array $columns = ['*'], array $filters = []): LengthAwarePaginator
     {
         return Faq::select($columns)
@@ -28,26 +25,18 @@ class FaqModelRepository implements FaqRepository
 
     public function store(array $data): mixed
     {
-        return $this->execute(function () use ($data) {
-            Faq::create($data);
-        });
+        return Faq::create($data);
     }
 
     public function update(array $data, Faq $faq, bool $updateTranslations = false): mixed
     {
-        return $this->execute(function () use ($data, $faq) {
-            $faq->update($data);
-
-            return true;
-        });
+        return $faq->update($data);
     }
 
     public function deleteMulti(array $ids): ?bool
     {
-        return $this->execute(function () use ($ids) {
-            Faq::destroy($ids);
+        Faq::destroy($ids);
 
-            return true;
-        });
+        return true;
     }
 }

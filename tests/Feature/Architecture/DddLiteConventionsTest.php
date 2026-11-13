@@ -32,6 +32,28 @@ class DddLiteConventionsTest extends TestCase
         $this->assertStringNotContainsString('session()->flushMessage', $pageRepository);
     }
 
+    public function test_cms_repositories_do_not_swallow_failures_or_flash_sessions(): void
+    {
+        foreach ([
+            'Modules/Cms/app/Repositories/BlogCategory/BlogCategoryModelRepository.php',
+            'Modules/Cms/app/Repositories/Faq/FaqModelRepository.php',
+        ] as $path) {
+            $repository = file_get_contents(base_path($path));
+
+            $this->assertStringNotContainsString('ExceptionHandlerTrait', $repository);
+            $this->assertStringNotContainsString('catch (', $repository);
+            $this->assertStringNotContainsString('session()', $repository);
+        }
+    }
+
+    public function test_blog_category_controller_delegates_workflows_to_application_service(): void
+    {
+        $controller = file_get_contents(base_path('Modules/Cms/app/Http/Controllers/Admin/BlogCategoryController.php'));
+
+        $this->assertStringContainsString('BlogCategoryApplicationService', $controller);
+        $this->assertStringNotContainsString('BlogCategoryRepository', $controller);
+    }
+
     public function test_log_model_scope_does_not_read_request_directly(): void
     {
         $logModel = file_get_contents(base_path('Modules/Base/app/Models/LogDb.php'));

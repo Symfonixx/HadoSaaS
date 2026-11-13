@@ -2,7 +2,6 @@
 
 namespace Modules\Base\Models;
 
-use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -56,11 +55,7 @@ class Seo extends Model
 
         if ($updateTranslations) {
             foreach (otherLangs() as $lang) {
-                try {
-                    $translations[$lang] = autoGoogleTranslator($lang, $value);
-                } catch (Exception $e) {
-                    session()->flushMessage(false, $e->getMessage(), $e);
-                }
+                $translations[$lang] = autoGoogleTranslator($lang, $value);
             }
         }
 
