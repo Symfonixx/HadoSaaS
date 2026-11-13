@@ -15,5 +15,5 @@ interface FaqRepository
 
     public function update(array $data, Faq $faq, bool $updateTranslations = false): mixed;
 
-    public function deleteMulti(array $ids): ?bool;
+    public function deleteMulti(array $ids): int;
 }

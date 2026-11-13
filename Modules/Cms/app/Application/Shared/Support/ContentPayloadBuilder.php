@@ -94,7 +94,8 @@ class ContentPayloadBuilder
             return $existingImage;
         }
 
-        return $this->upload($image, $uploadPath, $slug, $existingImage);
+        // Keep the current path until the application service commits its update.
+        return $this->upload($image, $uploadPath, $slug);
     }
 
     private function parseKeywords(null|string|array $keywordsInput): string

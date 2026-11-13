@@ -3,27 +3,25 @@
 namespace Modules\Core\Console;
 
 use Illuminate\Console\Command;
-use Modules\Core\Traits\FileTrait;
+use Modules\Core\Application\Files\PendingFileDeletionService;
 
 class ProcessPendingFileDeletionsCommand extends Command
 {
-    use FileTrait;
-
     protected $signature = 'files:cleanup-pending';
 
     protected $description = 'Retry queued file deletions that previously failed.';
 
     public function handle(): int
     {
-        $result = $this->processPendingFileDeletions();
+        $failed = app(PendingFileDeletionService::class)->processPendingFileDeletions();
 
-        if ($result['failed'] > 0) {
-            $this->components->error($result['failed'].' queued file deletion(s) still need cleanup.');
+        if ($failed > 0) {
+            $this->components->error($failed.' queued file deletion(s) still need cleanup.');
 
             return self::FAILURE;
         }
 
-        $this->components->info($result['completed'].' queued file deletion(s) processed.');
+        $this->components->info('Queued file deletions processed.');
 
         return self::SUCCESS;
     }

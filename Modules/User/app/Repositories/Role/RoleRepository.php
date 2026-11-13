@@ -13,9 +13,11 @@ interface RoleRepository
 
     public function permissions(): Collection;
 
-    public function store(string $name, array $permissions): ?Role;
+    public function store(string $name): ?Role;
 
-    public function update(int $id, string $name, array $permissions): ?Role;
+    public function update(Role $role, string $name): ?Role;
+
+    public function syncPermissions(Role $role, array $permissions): void;
 
     public function delete(int $id): ?bool;
 

@@ -10,5 +10,7 @@ interface SettingsRepository
 
     public function get(string $key, ?string $default = null): mixed;
 
-    public function set(string $key, ?string $value): bool;
+    public function set(string $key, string $value): bool;
+
+    public function resetCache(): void;
 }

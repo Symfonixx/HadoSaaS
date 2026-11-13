@@ -76,7 +76,10 @@
                     "searching": true, // Enable searching
                     "info": false,
                     "order": [],          // Disable initial auto-ordering
-                    "ordering": true
+                    "ordering": true,
+                    "language": {
+                        "emptyTable": "{{__('No data available in table')}}"
+                    }
 
                 });
 

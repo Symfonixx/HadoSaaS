@@ -36,7 +36,12 @@ trait FileTrait
 
         // Handle PDF files
         if ($extension === 'pdf') {
-            return Storage::disk($disk)->putFileAs($dir, $file, $filename);
+            $path = Storage::disk($disk)->putFileAs($dir, $file, $filename);
+            if (! is_string($path) || $path === '') {
+                throw new \RuntimeException('Could not store the uploaded file.');
+            }
+
+            return $path;
         }
 
         // Process and upload image
@@ -44,7 +49,9 @@ trait FileTrait
         if ($width) {
             $image->resize($width);
         }
-        Storage::disk($disk)->put($dir.'/'.$filename, (string) $image->encode());
+        if (! Storage::disk($disk)->put($dir.'/'.$filename, (string) $image->encode())) {
+            throw new \RuntimeException('Could not store the uploaded image.');
+        }
 
         return $dir.'/'.$filename;
     }
@@ -90,7 +97,7 @@ trait FileTrait
         }
     }
 
-    protected function queueFileDeletionIfUnreferenced(?string $path, string $disk = 'public'): void
+    public function queueFileDeletionIfUnreferenced(?string $path, string $disk = 'public'): void
     {
         if ($path === null || trim($path) === '' || $this->isFileReferenced($path)) {
             return;
@@ -127,30 +134,31 @@ trait FileTrait
         return array_values($normalized);
     }
 
-    /** Process durable deletion requests; failures remain queued for a later retry. */
-    public function processPendingFileDeletions(): array
+    /** Process durable deletion requests; storage failures remain queued for retry. */
+    public function processPendingFileDeletions(): int
     {
-        $completed = 0;
         $failed = 0;
 
         foreach (DB::table('pending_file_deletions')->orderBy('id')->get() as $pending) {
-            try {
-                if (! $this->isFileReferenced($pending->path)) {
+            if (! $this->isFileReferenced($pending->path)) {
+                try {
                     $this->deleteFile($pending->path, $pending->disk);
+                } catch (Throwable $exception) {
+                    report($exception);
+                    $failed++;
+                    continue;
                 }
-
-                DB::table('pending_file_deletions')->where('id', $pending->id)->delete();
-                $completed++;
-            } catch (Throwable $exception) {
-                report($exception);
-                $failed++;
             }
+
+            // Database failures must propagate. If storage deletion already succeeded,
+            // the durable row remains and the next retry safely treats a missing file as done.
+            $this->removePendingFileDeletion((int) $pending->id);
         }
 
-        return ['completed' => $completed, 'failed' => $failed];
+        return $failed;
     }
 
-    private function isFileReferenced(string $path): bool
+    protected function isFileReferenced(string $path): bool
     {
         $references = [
             'blogs' => ['image', 'meta_image'],
@@ -173,6 +181,11 @@ trait FileTrait
         }
 
         return false;
+    }
+
+    protected function removePendingFileDeletion(int $id): void
+    {
+        DB::table('pending_file_deletions')->where('id', $id)->delete();
     }
 
     /**

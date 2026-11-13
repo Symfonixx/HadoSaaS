@@ -41,41 +41,23 @@ class Seo extends Model
         return Cache::remember('seo_entries', now()->addMinutes(10), fn () => self::all());
     }
 
-    /**
-     * Set SEO value by key.
-     */
-    public static function set(string $key, string $value, bool $updateTranslations = true): bool
+    /** @return array<string, string> */
+    public static function translationsFor(string $key): array
     {
-        $seo = self::getAllSeoEntries();
+        return self::query()->where('key', $key)->first()?->getTranslations('value') ?? [];
+    }
 
-        $model = $seo->firstWhere('key', $key);
-
-        $translations = $model?->getTranslations('value') ?? [];
-        $translations[app()->getLocale()] = $value;
-
-        if ($updateTranslations) {
-            foreach (otherLangs() as $lang) {
-                $translations[$lang] = autoGoogleTranslator($lang, $value);
-            }
-        }
-
+    /** Persist a fully prepared translation map without external service calls. */
+    public static function setTranslations(string $key, array $translations): bool
+    {
+        $model = self::query()->where('key', $key)->first();
         if ($model) {
-            $model->update(['value' => $translations]);
-        } else {
-            $model = self::create(['key' => $key, 'value' => $translations]);
-            $seo->push($model); // Update the cached collection.
+            return $model->update(['value' => $translations]);
         }
 
-        self::cacheSeoEntries($seo);
+        $model = new self(['key' => $key, 'value' => $translations]);
 
-        return true;
+        return $model->save();
     }
 
-    /**
-     * Cache the SEO entries.
-     */
-    protected static function cacheSeoEntries(Collection $seo): void
-    {
-        Cache::put('seo_entries', $seo, now()->addMinutes(10));
-    }
 }

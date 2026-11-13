@@ -3,6 +3,7 @@
 namespace Modules\Cms\Application\Faq;
 
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Modules\Cms\Application\Faq\Commands\UpsertFaqCommand;
 use Modules\Cms\Application\Shared\Queries\ContentListQuery;
 use Modules\Cms\Application\Shared\Support\ContentPayloadBuilder;
@@ -33,7 +34,9 @@ class FaqApplicationService
             updateTranslations: true
         );
 
-        $this->repository->store($payload);
+        if (! $this->repository->store($payload)) {
+            throw new \RuntimeException('The FAQ could not be created.');
+        }
         $this->clearCache();
         $this->flashMessenger->success();
     }
@@ -49,7 +52,9 @@ class FaqApplicationService
             updateTranslations: $command->updateTranslations
         );
 
-        $this->repository->update($payload, $faq, $command->updateTranslations);
+        if (! $this->repository->update($payload, $faq, $command->updateTranslations)) {
+            throw new \RuntimeException('The FAQ update did not persist.');
+        }
         $this->clearCache();
         $this->flashMessenger->success();
     }
@@ -59,7 +64,11 @@ class FaqApplicationService
      */
     public function deleteMulti(array $ids): void
     {
-        $this->repository->deleteMulti($ids);
+        DB::transaction(function () use ($ids): void {
+            if ($this->repository->deleteMulti($ids) !== count(array_unique(array_map('intval', $ids)))) {
+                throw new \RuntimeException('Not all selected FAQs could be deleted.');
+            }
+        });
         $this->clearCache();
         $this->flashMessenger->success();
     }

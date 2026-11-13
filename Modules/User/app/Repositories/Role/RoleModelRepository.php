@@ -19,22 +19,23 @@ class RoleModelRepository implements RoleRepository
         return Role::all();
     }
 
-    public function store(string $name, array $permissions): ?Role
+    public function store(string $name): ?Role
     {
-        $role = Role::create(['name' => $name]);
-        $role->syncPermissions($permissions);
+        return Role::create(['name' => $name]);
+    }
+
+    public function update(Role $role, string $name): ?Role
+    {
+        if (! $role->update(['name' => $name])) {
+            return null;
+        }
 
         return $role;
     }
 
-    public function update(int $id, string $name, array $permissions): ?Role
+    public function syncPermissions(Role $role, array $permissions): void
     {
-        $role = $this->findById($id);
-        abort_if($role->name === 'Admin', 403, 'The super-admin role cannot be modified.');
-        $role->update(['name' => $name]);
         $role->syncPermissions($permissions);
-
-        return $role;
     }
 
     public function findById(int $id): Role
@@ -45,16 +46,14 @@ class RoleModelRepository implements RoleRepository
     public function delete(int $id): bool
     {
         $role = $this->findById($id);
-        abort_if($role->name === 'Admin', 403, 'The super-admin role cannot be deleted.');
         return (bool) $role->delete();
     }
 
     public function assignUsersToRole(int $id, array $userIds): bool
     {
         $role = $this->findById($id);
-        abort_if($role->name === 'Admin', 403, 'Users cannot be assigned through this workflow to the super-admin role.');
-            $users = User::whereIn('id', $userIds)->get();
-            $role->users()->syncWithoutDetaching($users);
+        $users = User::whereIn('id', $userIds)->get();
+        $role->users()->syncWithoutDetaching($users);
 
         return true;
     }
@@ -62,7 +61,6 @@ class RoleModelRepository implements RoleRepository
     public function removeUsersFromRole(int $id, array $userIds): bool
     {
         $role = $this->findById($id);
-        abort_if($role->name === 'Admin', 403, 'Users cannot be removed through this workflow from the super-admin role.');
         $users = User::whereIn('id', $userIds)->get();
         $role->users()->detach($users);
 
@@ -73,7 +71,6 @@ class RoleModelRepository implements RoleRepository
     {
         $user = User::findOrFail($userId);
         $role = $this->findById($id);
-        abort_if($role->name === 'Admin', 403, 'Users cannot be removed through this workflow from the super-admin role.');
         $user->roles()->detach($role);
 
         return true;

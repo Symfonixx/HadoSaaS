@@ -32,23 +32,33 @@ class Settings extends Model
         }
     }
 
+    public static function resetCache(): void
+    {
+        self::$settingsCache = null;
+    }
+
     /**
      * Set the value of a setting by key.
      */
-    public static function set(string $key, ?string $value): bool
+    public static function set(string $key, string $value): bool
     {
-        if ($value === null) {
-            return false;
+        if (trim($key) === '') {
+            throw new \InvalidArgumentException('Setting keys must not be empty.');
         }
 
         self::loadSettingsCache();
 
         if (! isset(self::$settingsCache[$key])) {
-            $model = self::create(['key' => $key, 'value' => $value]);
+            $model = new self(['key' => $key, 'value' => $value]);
+            if (! $model->save()) {
+                return false;
+            }
             self::$settingsCache[$key] = $model;
         } else {
             $model = self::$settingsCache[$key];
-            $model->update(['value' => $value]);
+            if (! $model->update(['value' => $value])) {
+                return false;
+            }
         }
 
         return true;

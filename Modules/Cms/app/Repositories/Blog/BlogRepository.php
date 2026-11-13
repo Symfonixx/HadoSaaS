@@ -2,6 +2,7 @@
 
 namespace Modules\Cms\Repositories\Blog;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Modules\Cms\Models\Blog;
 
@@ -15,5 +16,7 @@ interface BlogRepository
 
     public function update(array $data, Blog $blog, bool $updateTranslations = false): mixed;
 
-    public function deleteMulti(array $ids): ?bool;
+    public function findManyForDeletion(array $ids): Collection;
+
+    public function deleteMany(array $ids): int;
 }

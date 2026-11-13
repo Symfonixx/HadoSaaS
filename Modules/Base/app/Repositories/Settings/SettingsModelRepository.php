@@ -17,8 +17,13 @@ class SettingsModelRepository implements SettingsRepository
         return Settings::get($key, $default);
     }
 
-    public function set(string $key, ?string $value): bool
+    public function set(string $key, string $value): bool
     {
         return Settings::set($key, $value);
+    }
+
+    public function resetCache(): void
+    {
+        Settings::resetCache();
     }
 }

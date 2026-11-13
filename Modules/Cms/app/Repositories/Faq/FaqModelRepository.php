@@ -25,7 +25,9 @@ class FaqModelRepository implements FaqRepository
 
     public function store(array $data): mixed
     {
-        return Faq::create($data);
+        $faq = new Faq($data);
+
+        return $faq->save() ? $faq : null;
     }
 
     public function update(array $data, Faq $faq, bool $updateTranslations = false): mixed
@@ -33,10 +35,8 @@ class FaqModelRepository implements FaqRepository
         return $faq->update($data);
     }
 
-    public function deleteMulti(array $ids): ?bool
+    public function deleteMulti(array $ids): int
     {
-        Faq::destroy($ids);
-
-        return true;
+        return Faq::destroy($ids);
     }
 }

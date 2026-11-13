@@ -4,6 +4,8 @@ namespace Modules\User\Application\Role;
 
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Auth\Access\AuthorizationException;
 use Modules\Core\Contracts\Flash\FlashMessengerInterface;
 use Modules\User\Repositories\Role\RoleRepository;
 use Spatie\Permission\Models\Role;
@@ -32,7 +34,12 @@ class RoleManagementApplicationService
 
     public function store(string $name, array $permissions): ?Role
     {
-        $role = $this->roleRepository->store($name, $permissions);
+        $role = DB::transaction(function () use ($name, $permissions) {
+            $role = $this->roleRepository->store($name);
+            $this->roleRepository->syncPermissions($role, $permissions);
+
+            return $role;
+        });
         if ($role) {
             $this->flashMessenger->success();
         }
@@ -42,7 +49,17 @@ class RoleManagementApplicationService
 
     public function update(int $id, string $name, array $permissions): ?Role
     {
-        $role = $this->roleRepository->update($id, $name, $permissions);
+        $role = DB::transaction(function () use ($id, $name, $permissions) {
+            $role = $this->roleRepository->findById($id);
+            $this->assertNotSuperAdmin($role, 'The super-admin role cannot be modified.');
+            $role = $this->roleRepository->update($role, $name);
+            if (! $role) {
+                throw new \RuntimeException('The role update did not persist.');
+            }
+            $this->roleRepository->syncPermissions($role, $permissions);
+
+            return $role;
+        });
         if ($role) {
             $this->flashMessenger->success();
         }
@@ -52,7 +69,12 @@ class RoleManagementApplicationService
 
     public function delete(int $id): bool
     {
-        $deleted = (bool) $this->roleRepository->delete($id);
+        $deleted = DB::transaction(function () use ($id): bool {
+            $role = $this->roleRepository->findById($id);
+            $this->assertNotSuperAdmin($role, 'The super-admin role cannot be deleted.');
+
+            return (bool) $this->roleRepository->delete($id);
+        });
         if ($deleted) {
             $this->flashMessenger->success();
         }
@@ -62,7 +84,11 @@ class RoleManagementApplicationService
 
     public function assignUsersToRole(int $id, array $userIds): bool
     {
-        $assigned = $this->roleRepository->assignUsersToRole($id, $userIds);
+        $assigned = DB::transaction(function () use ($id, $userIds): bool {
+            $this->assertNotSuperAdmin($this->roleRepository->findById($id), 'Users cannot be assigned through this workflow to the super-admin role.');
+
+            return $this->roleRepository->assignUsersToRole($id, $userIds);
+        });
         if ($assigned) {
             $this->flashMessenger->success();
         }
@@ -72,7 +98,11 @@ class RoleManagementApplicationService
 
     public function removeUsersFromRole(int $id, array $userIds): bool
     {
-        $removed = $this->roleRepository->removeUsersFromRole($id, $userIds);
+        $removed = DB::transaction(function () use ($id, $userIds): bool {
+            $this->assertNotSuperAdmin($this->roleRepository->findById($id), 'Users cannot be removed through this workflow from the super-admin role.');
+
+            return $this->roleRepository->removeUsersFromRole($id, $userIds);
+        });
         if ($removed) {
             $this->flashMessenger->success();
         }
@@ -82,7 +112,11 @@ class RoleManagementApplicationService
 
     public function removeUserFromRole(int $id, int $userId): bool
     {
-        $removed = $this->roleRepository->removeUserFromRole($id, $userId);
+        $removed = DB::transaction(function () use ($id, $userId): bool {
+            $this->assertNotSuperAdmin($this->roleRepository->findById($id), 'Users cannot be removed through this workflow from the super-admin role.');
+
+            return $this->roleRepository->removeUserFromRole($id, $userId);
+        });
         if ($removed) {
             $this->flashMessenger->success();
         }
@@ -95,5 +129,12 @@ class RoleManagementApplicationService
         return User::type('admin')
             ->whereDoesntHave('roles', fn ($query) => $query->where('id', $roleId))
             ->get();
+    }
+
+    private function assertNotSuperAdmin(Role $role, string $message): void
+    {
+        if ($role->name === 'Admin') {
+            throw new AuthorizationException($message);
+        }
     }
 }

@@ -27,15 +27,19 @@ class SeoController extends Controller
 
     public function store(Request $request)
     {
+        $robotsTxt = null;
+        if ($request->exists('robots_txt')) {
+            $robotsTxt = $request->input('robots_txt');
+            if (! is_string($robotsTxt)) {
+                throw new \InvalidArgumentException('Robots text must be a string.');
+            }
+        }
+
         $this->seoService->update(
             data: $request->input('data', []),
-            updateTranslations: $request->boolean('update_translations')
+            updateTranslations: $request->boolean('update_translations'),
+            robotsTxt: $robotsTxt
         );
-
-        if ($request->has('robots_txt')) {
-            $this->settingsRepository->set('robots_txt', (string) $request->input('robots_txt', ''));
-            cache()->forget('settings');
-        }
 
         return back();
     }

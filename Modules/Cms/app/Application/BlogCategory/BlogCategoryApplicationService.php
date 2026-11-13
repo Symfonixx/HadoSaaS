@@ -3,6 +3,7 @@
 namespace Modules\Cms\Application\BlogCategory;
 
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Modules\Cms\Models\BlogCategory;
 use Modules\Cms\Repositories\BlogCategory\BlogCategoryRepository;
 use Modules\Core\Contracts\Flash\FlashMessengerInterface;
@@ -23,19 +24,27 @@ class BlogCategoryApplicationService
 
     public function store(array $data): void
     {
-        $this->repository->store($this->prepareName($data));
+        if (! $this->repository->store($this->prepareName($data))) {
+            throw new \RuntimeException('The blog category could not be created.');
+        }
         $this->flashMessenger->success();
     }
 
     public function update(array $data, BlogCategory $category, bool $updateTranslations = false): void
     {
-        $this->repository->update($this->prepareName($data, $category, $updateTranslations), $category);
+        if (! $this->repository->update($this->prepareName($data, $category, $updateTranslations), $category)) {
+            throw new \RuntimeException('The blog category update did not persist.');
+        }
         $this->flashMessenger->success();
     }
 
     public function deleteMulti(array $ids): void
     {
-        $this->repository->deleteMulti($ids);
+        DB::transaction(function () use ($ids): void {
+            if ($this->repository->deleteMulti($ids) !== count(array_unique(array_map('intval', $ids)))) {
+                throw new \RuntimeException('Not all selected blog categories could be deleted.');
+            }
+        });
         $this->flashMessenger->success();
     }
 

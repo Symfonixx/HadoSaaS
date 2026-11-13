@@ -8,5 +8,17 @@ interface SeoRepository
 {
     public function allKeyValue(): Collection;
 
-    public function set(string $key, string $value, bool $updateTranslations = true): bool;
+    /** @return array<string, string> */
+    public function translationsFor(string $key): array;
+
+    /**
+     * Batch fetch translations for multiple keys in a single query.
+     *
+     * @param  string[]  $keys
+     * @return array<string, array<string, string>>
+     */
+    public function translationsForBatch(array $keys): array;
+
+    /** @param array<string, string> $translations */
+    public function setTranslations(string $key, array $translations): bool;
 }

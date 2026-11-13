@@ -7,7 +7,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Modules\User\Repositories\Role\RoleModelRepository;
+use Modules\User\Application\Role\RoleManagementApplicationService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Tests\TestCase;
 
 class RoleMemberRemovalTest extends TestCase
@@ -58,27 +59,27 @@ class RoleMemberRemovalTest extends TestCase
     {
         $superAdminRole = Role::create(['name' => 'Admin', 'guard_name' => 'web']);
         $member = $this->createUser('protected-member@example.test', '0905000000103');
-        $repository = app(RoleModelRepository::class);
+        $service = app(RoleManagementApplicationService::class);
 
         try {
-            $repository->update($superAdminRole->id, 'Renamed', []);
+            $service->update($superAdminRole->id, 'Renamed', []);
             $this->fail('Expected super-admin role updates to be blocked.');
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
-            $this->assertSame(403, $exception->getStatusCode());
+        } catch (AuthorizationException) {
+            $this->assertDatabaseHas('roles', ['id' => $superAdminRole->id, 'name' => 'Admin']);
         }
 
         try {
-            $repository->delete($superAdminRole->id);
+            $service->delete($superAdminRole->id);
             $this->fail('Expected super-admin role deletion to be blocked.');
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
-            $this->assertSame(403, $exception->getStatusCode());
+        } catch (AuthorizationException) {
+            $this->assertDatabaseHas('roles', ['id' => $superAdminRole->id, 'name' => 'Admin']);
         }
 
         try {
-            $repository->assignUsersToRole($superAdminRole->id, [$member->id]);
+            $service->assignUsersToRole($superAdminRole->id, [$member->id]);
             $this->fail('Expected assigning users to the super-admin role to be blocked.');
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
-            $this->assertSame(403, $exception->getStatusCode());
+        } catch (AuthorizationException) {
+            $this->assertDatabaseMissing('model_has_roles', ['model_id' => $member->id, 'role_id' => $superAdminRole->id]);
         }
 
         $this->assertSame('Admin', $superAdminRole->fresh()->name);

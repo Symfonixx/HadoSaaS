@@ -19,6 +19,7 @@ use Modules\Cms\Repositories\Page\PageRepository;
 use Modules\Cms\Repositories\Page\PageModelRepository;
 use Modules\Cms\Application\Shared\Support\ContentPayloadBuilder;
 use Modules\Core\Contracts\Flash\FlashMessengerInterface;
+use Modules\Core\Application\Files\PendingFileDeletionService;
 use Tests\TestCase;
 
 class ContentMultiDeleteConsistencyTest extends TestCase
@@ -34,14 +35,14 @@ class ContentMultiDeleteConsistencyTest extends TestCase
         Storage::disk('public')->put('pages/missing-check.jpg', 'page-image');
 
         try {
-            app(BlogModelRepository::class)->deleteMulti([$blog->id, 999999]);
+            $this->deleteBlog([$blog->id, 999999]);
             $this->fail('Expected a missing blog ID to abort the transaction.');
         } catch (ModelNotFoundException) {
             $this->assertDatabaseHas('blogs', ['id' => $blog->id]);
         }
 
         try {
-            app(PageModelRepository::class)->deleteMulti([$page->id, 999999]);
+            $this->deletePage([$page->id, 999999]);
             $this->fail('Expected a missing page ID to abort the transaction.');
         } catch (ModelNotFoundException) {
             $this->assertDatabaseHas('pages', ['id' => $page->id]);
@@ -60,8 +61,8 @@ class ContentMultiDeleteConsistencyTest extends TestCase
         Storage::disk('public')->put('blogs/duplicate-check.jpg', 'blog-image');
         Storage::disk('public')->put('pages/duplicate-check.jpg', 'page-image');
 
-        $this->assertTrue(app(BlogModelRepository::class)->deleteMulti([$blog->id, (string) $blog->id]));
-        $this->assertTrue(app(PageModelRepository::class)->deleteMulti([$page->id, (string) $page->id]));
+        $this->deleteBlog([$blog->id, (string) $blog->id]);
+        $this->deletePage([$page->id, (string) $page->id]);
 
         $this->assertDatabaseMissing('blogs', ['id' => $blog->id]);
         $this->assertDatabaseMissing('pages', ['id' => $page->id]);
@@ -80,14 +81,14 @@ class ContentMultiDeleteConsistencyTest extends TestCase
 
         try {
             try {
-                app(BlogModelRepository::class)->deleteMulti([$blog->id]);
+                $this->deleteBlog([$blog->id]);
                 $this->fail('Expected a blog database failure.');
             } catch (\RuntimeException $exception) {
                 $this->assertSame('Simulated blog delete failure.', $exception->getMessage());
             }
 
             try {
-                app(PageModelRepository::class)->deleteMulti([$page->id]);
+                $this->deletePage([$page->id]);
                 $this->fail('Expected a page database failure.');
             } catch (\RuntimeException $exception) {
                 $this->assertSame('Simulated page delete failure.', $exception->getMessage());
@@ -110,7 +111,10 @@ class ContentMultiDeleteConsistencyTest extends TestCase
         $failedDisk->shouldReceive('delete')->once()->with('blogs/retry.jpg')->andReturn(false);
         Storage::shouldReceive('disk')->once()->with('public')->andReturn($failedDisk);
 
-        $this->assertFalse(app(BlogModelRepository::class)->deleteMulti([$blog->id]));
+        $flash = Mockery::mock(FlashMessengerInterface::class);
+        $flash->shouldReceive('error')->once();
+        $flash->shouldNotReceive('success');
+        $this->deleteBlog([$blog->id], $flash);
         $this->assertDatabaseMissing('blogs', ['id' => $blog->id]);
         $this->assertDatabaseHas('pending_file_deletions', ['disk' => 'public', 'path' => 'blogs/retry.jpg']);
 
@@ -124,7 +128,7 @@ class ContentMultiDeleteConsistencyTest extends TestCase
             use \Modules\Core\Traits\FileTrait;
         })->processPendingFileDeletions();
 
-        $this->assertSame(['completed' => 1, 'failed' => 0], $result);
+        $this->assertSame(0, $result);
         $this->assertDatabaseMissing('pending_file_deletions', ['path' => 'blogs/retry.jpg']);
     }
 
@@ -136,9 +140,46 @@ class ContentMultiDeleteConsistencyTest extends TestCase
         $disk->shouldReceive('delete')->once()->with('pages/retry.jpg')->andReturn(false);
         Storage::shouldReceive('disk')->once()->with('public')->andReturn($disk);
 
-        $this->assertFalse(app(PageModelRepository::class)->deleteMulti([$page->id]));
+        $flash = Mockery::mock(FlashMessengerInterface::class);
+        $flash->shouldReceive('error')->once();
+        $flash->shouldNotReceive('success');
+        $this->deletePage([$page->id], $flash);
         $this->assertDatabaseMissing('pages', ['id' => $page->id]);
         $this->assertDatabaseHas('pending_file_deletions', ['disk' => 'public', 'path' => 'pages/retry.jpg']);
+    }
+
+    public function test_outbox_row_removal_failure_propagates_and_retry_is_safe_after_file_delete(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('blogs/outbox-row-failure.jpg', 'image');
+        $id = DB::table('pending_file_deletions')->insertGetId([
+            'disk' => 'public',
+            'path' => 'blogs/outbox-row-failure.jpg',
+            'path_hash' => hash('sha256', 'blogs/outbox-row-failure.jpg'),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $processor = new class
+        {
+            use \Modules\Core\Traits\FileTrait;
+
+            protected function removePendingFileDeletion(int $id): void
+            {
+                throw new \RuntimeException('outbox row removal failed');
+            }
+        };
+        try {
+            $processor->processPendingFileDeletions();
+            $this->fail('Expected the database failure to propagate.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('outbox row removal failed', $exception->getMessage());
+        }
+        Storage::disk('public')->assertMissing('blogs/outbox-row-failure.jpg');
+        $this->assertDatabaseHas('pending_file_deletions', ['id' => $id]);
+
+        $this->assertSame(0, app(PendingFileDeletionService::class)->processPendingFileDeletions());
+        $this->assertDatabaseMissing('pending_file_deletions', ['id' => $id]);
     }
 
     public function test_shared_content_image_is_not_deleted_while_another_record_references_it(): void
@@ -148,26 +189,9 @@ class ContentMultiDeleteConsistencyTest extends TestCase
         $page = $this->createPage('shared/content.jpg');
         Storage::disk('public')->put('shared/content.jpg', 'shared-image');
 
-        $this->assertTrue(app(BlogModelRepository::class)->deleteMulti([$blog->id]));
+        $this->deleteBlog([$blog->id]);
         $this->assertDatabaseHas('pages', ['id' => $page->id]);
         Storage::disk('public')->assertExists('shared/content.jpg');
-    }
-
-    public function test_services_report_pending_cleanup_without_reporting_complete_success(): void
-    {
-        $blogRepository = Mockery::mock(BlogRepository::class);
-        $blogRepository->shouldReceive('deleteMulti')->once()->with([1])->andReturn(false);
-        $blogFlash = Mockery::mock(FlashMessengerInterface::class);
-        $blogFlash->shouldReceive('error')->once()->with('Blog records were deleted; file cleanup is pending and will be retried.');
-        $blogFlash->shouldNotReceive('success');
-        (new BlogApplicationService($blogRepository, Mockery::mock(ContentPayloadBuilder::class), $blogFlash))->deleteMulti([1]);
-
-        $pageRepository = Mockery::mock(PageRepository::class);
-        $pageRepository->shouldReceive('deleteMulti')->once()->with([1])->andReturn(false);
-        $pageFlash = Mockery::mock(FlashMessengerInterface::class);
-        $pageFlash->shouldReceive('error')->once()->with('Page records were deleted; file cleanup is pending and will be retried.');
-        $pageFlash->shouldNotReceive('success');
-        (new PageApplicationService($pageRepository, Mockery::mock(ContentPayloadBuilder::class), $pageFlash))->deleteMulti([1]);
     }
 
     public function test_file_trait_rejects_unsafe_paths_and_throws_when_storage_deletion_fails(): void
@@ -225,5 +249,25 @@ class ContentMultiDeleteConsistencyTest extends TestCase
             'image' => $image,
             'meta_image' => $image,
         ]);
+    }
+
+    private function deleteBlog(array $ids, ?FlashMessengerInterface $flash = null): void
+    {
+        if ($flash === null) {
+            $flash = Mockery::mock(FlashMessengerInterface::class);
+            $flash->shouldReceive('success')->zeroOrMoreTimes();
+            $flash->shouldReceive('error')->zeroOrMoreTimes();
+        }
+        (new BlogApplicationService(app(BlogRepository::class), Mockery::mock(ContentPayloadBuilder::class), $flash, app(PendingFileDeletionService::class)))->deleteMulti($ids);
+    }
+
+    private function deletePage(array $ids, ?FlashMessengerInterface $flash = null): void
+    {
+        if ($flash === null) {
+            $flash = Mockery::mock(FlashMessengerInterface::class);
+            $flash->shouldReceive('success')->zeroOrMoreTimes();
+            $flash->shouldReceive('error')->zeroOrMoreTimes();
+        }
+        (new PageApplicationService(app(PageRepository::class), Mockery::mock(ContentPayloadBuilder::class), $flash, app(PendingFileDeletionService::class)))->deleteMulti($ids);
     }
 }

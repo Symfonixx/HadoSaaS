@@ -12,8 +12,23 @@ class SeoModelRepository implements SeoRepository
         return Seo::query()->pluck('value', 'key');
     }
 
-    public function set(string $key, string $value, bool $updateTranslations = true): bool
+    public function translationsFor(string $key): array
     {
-        return Seo::set($key, $value, $updateTranslations);
+        return Seo::translationsFor($key);
+    }
+
+    public function translationsForBatch(array $keys): array
+    {
+        $seos = Seo::query()->whereIn('key', $keys)->get();
+        $result = [];
+        foreach ($seos as $seo) {
+            $result[$seo->key] = $seo->getTranslations('value');
+        }
+        return $result;
+    }
+
+    public function setTranslations(string $key, array $translations): bool
+    {
+        return Seo::setTranslations($key, $translations);
     }
 }

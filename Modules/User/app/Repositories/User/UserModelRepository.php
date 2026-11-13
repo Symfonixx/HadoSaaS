@@ -5,13 +5,10 @@ namespace Modules\User\app\Repositories\User;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Hash;
-use Modules\Core\Traits\FileTrait;
 use Modules\User\app\Data\UserData;
 
 class UserModelRepository implements UserRepository
 {
-    use FileTrait;
-
     public function all(string $type): LengthAwarePaginator
     {
         return User::query()
@@ -56,25 +53,15 @@ class UserModelRepository implements UserRepository
                 $updateData['password'] = Hash::make($userData->password);
             }
 
-        $user->update($updateData);
+        if (! $user->update($updateData)) {
+            return null;
+        }
 
         return $user;
     }
 
     public function delete(User $user): bool
     {
-        if ($user->hasRole('Admin')) {
-            throw new \Illuminate\Auth\Access\AuthorizationException('The super-admin account cannot be deleted through this workflow.');
-        }
-
-        if ($user->type === 'admin' && User::query()->where('type', 'admin')->count() <= 1) {
-            throw new \Illuminate\Auth\Access\AuthorizationException('The last administrator account cannot be deleted.');
-        }
-
-        if ($user->img) {
-            $this->deleteFile($user->img);
-        }
         return (bool) $user->delete();
-
     }
 }

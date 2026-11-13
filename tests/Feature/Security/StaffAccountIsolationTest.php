@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Modules\User\app\Data\UserData;
 use Modules\User\app\Repositories\User\UserModelRepository;
+use Modules\User\Application\User\UserManagementApplicationService;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -123,7 +124,7 @@ class StaffAccountIsolationTest extends TestCase
         ]);
 
         try {
-            app(UserModelRepository::class)->delete($admin);
+            app(UserManagementApplicationService::class)->delete($admin);
             $this->fail('Expected the last administrator deletion to be rejected.');
         } catch (AuthorizationException) {
             $this->assertDatabaseHas('users', ['id' => $admin->id]);

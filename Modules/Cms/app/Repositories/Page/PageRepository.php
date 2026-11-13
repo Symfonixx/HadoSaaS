@@ -2,6 +2,7 @@
 
 namespace Modules\Cms\Repositories\Page;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Modules\Cms\Models\Page;
 
@@ -27,8 +28,7 @@ interface PageRepository
      */
     public function update(array $data, Page $page, bool $updateTranslations = false): mixed;
 
-    /**
-     * Delete multiple pages by their IDs.
-     */
-    public function deleteMulti(array $ids): ?bool;
+    public function findManyForDeletion(array $ids): Collection;
+
+    public function deleteMany(array $ids): int;
 }

@@ -17,16 +17,16 @@ class BlogCategoryModelRepository implements BlogCategoryRepository {
     }
 
     public function store(array $data): mixed {
-        return BlogCategory::create($data);
+        $category = new BlogCategory($data);
+
+        return $category->save() ? $category : null;
     }
 
     public function update(array $data, BlogCategory $category, bool $updateTranslations = false): mixed {
         return $category->update($data);
     }
 
-    public function deleteMulti(array $ids): ?bool {
-        BlogCategory::destroy($ids);
-
-        return true;
+    public function deleteMulti(array $ids): int {
+        return BlogCategory::destroy($ids);
     }
 }
