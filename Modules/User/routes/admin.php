@@ -18,9 +18,8 @@ Route::middleware('can:Hr Management')
                 Route::post('assign_users', [RoleController::class, 'assignUsersToRole'])->name('assign_users');
                 Route::post('remove_user_from_role', [RoleController::class, 'removeUserFromRole'])->name('remove_user_from_role');
                 Route::post('remove_users_from_role', [RoleController::class, 'removeUsersFromRole'])->name('remove_users_from_role');
-                Route::get('delete_role/{id}', [RoleController::class, 'delete_role'])->name('delete_role');
             });
-        Route::resource('roles', RoleController::class)->except('destroy');
+        Route::resource('roles', RoleController::class);
 
         Route::resource('staffs', StaffController::class)->except('create', 'edit', 'show');
 

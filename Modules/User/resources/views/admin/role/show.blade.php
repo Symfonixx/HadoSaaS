@@ -11,9 +11,13 @@
     @endphp
     <x-admin.breadcrumb :pageTitle="__('Roles')" :breadcrumbItems="$breadcrumbItems"/>
     <div class="d-flex align-items-center gap-2 gap-lg-3">
-        <a class="btn btn-sm btn-danger fw-bold" href="{{route('admin.roles.delete_role' , $role->id)}}">
-            {{__('Delete Role')}}
-        </a>
+        @if ($role->name !== 'Admin')
+            <form method="POST" action="{{ route('admin.roles.destroy', $role->id) }}">
+                @csrf
+                @method('DELETE')
+                <button class="btn btn-sm btn-danger fw-bold" type="submit">{{ __('Delete Role') }}</button>
+            </form>
+        @endif
     </div>
 
 @endsection

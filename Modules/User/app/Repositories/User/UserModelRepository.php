@@ -5,13 +5,12 @@ namespace Modules\User\app\Repositories\User;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Hash;
-use Modules\Core\Traits\ExceptionHandlerTrait;
 use Modules\Core\Traits\FileTrait;
 use Modules\User\app\Data\UserData;
 
 class UserModelRepository implements UserRepository
 {
-    use ExceptionHandlerTrait, FileTrait;
+    use FileTrait;
 
     public function all(string $type): LengthAwarePaginator
     {
@@ -25,22 +24,27 @@ class UserModelRepository implements UserRepository
 
     public function store(UserData $userData): ?User
     {
-        return $this->execute(function () use ($userData) {
-            $user = User::create([
+        if (! in_array($userData->type, ['user', 'staff'], true)) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('Only standard user accounts may be created through this workflow.');
+        }
+
+        $user = User::create([
                 'name' => $userData->name,
                 'email' => $userData->email,
                 'mobile' => $userData->mobile,
                 'password' => Hash::make($userData->password),
-                'type' => $userData->type,
             ]);
 
-            return $user;
-        });
+        $user->forceFill(['type' => $userData->type])->save();
+        return $user;
     }
 
     public function update(UserData $userData, User $user): ?User
     {
-        return $this->execute(function () use ($userData, $user) {
+        if ($user->type === 'admin') {
+            throw new \Illuminate\Auth\Access\AuthorizationException('This workflow cannot modify this account type.');
+        }
+
             $updateData = [
                 'name' => $userData->name,
                 'email' => $userData->email,
@@ -50,22 +54,21 @@ class UserModelRepository implements UserRepository
                 $updateData['password'] = Hash::make($userData->password);
             }
 
-            $user->update($updateData);
+        $user->update($updateData);
 
-            return $user;
-        });
+        return $user;
     }
 
     public function delete(User $user): bool
     {
-        return $this->execute(function () use ($user) {
-            if ($user->img) {
-                $this->deleteFile($user->img);
-            }
-            $user->delete();
+        if ($user->type === 'admin') {
+            throw new \Illuminate\Auth\Access\AuthorizationException('This workflow cannot delete this account type.');
+        }
 
-            return true;
-        });
+        if ($user->img) {
+            $this->deleteFile($user->img);
+        }
+        return (bool) $user->delete();
 
     }
 }

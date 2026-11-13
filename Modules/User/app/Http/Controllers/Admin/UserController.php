@@ -25,7 +25,7 @@ class UserController extends Controller
 
     public function store(StoreUserRequest $request)
     {
-        $userData = UserData::validateAndCreate($request->all());
+        $userData = UserData::validateAndCreate(array_merge($request->all(), ['type' => 'user']));
         $this->userService->store($userData);
 
         return redirect()->route('admin.users.index');
@@ -33,8 +33,8 @@ class UserController extends Controller
 
     public function update(Request $request, $id)
     {
-        $user = $this->userService->find($id);
-        $userData = UserData::validateAndCreate($request->all());
+        $user = \App\Models\User::query()->where('type', 'user')->findOrFail($id);
+        $userData = UserData::validateAndCreate(array_merge($request->all(), ['type' => 'user']));
         $this->userService->update($userData, $user);
 
         return redirect()->route('admin.users.index');
@@ -42,7 +42,7 @@ class UserController extends Controller
 
     public function destroy($id)
     {
-        $user = $this->userService->find($id);
+        $user = \App\Models\User::query()->where('type', 'user')->findOrFail($id);
         $this->userService->delete($user);
 
         return response()->json([

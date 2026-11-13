@@ -12,8 +12,9 @@ class RoleUsersRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'role_id' => 'required',
-            'user_ids' => 'required|array',
+            'role_id' => 'required|integer|exists:roles,id',
+            'user_ids' => 'required|array|min:1',
+            'user_ids.*' => 'required|integer|distinct|exists:users,id',
         ];
     }
 
@@ -22,6 +23,6 @@ class RoleUsersRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('Hr Management') ?? false;
     }
 }

@@ -5,12 +5,12 @@ namespace Modules\Cms\Repositories\Blog;
 use Config;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Modules\Cms\Models\Blog;
-use Modules\Core\Traits\ExceptionHandlerTrait;
 use Modules\Core\Traits\FileTrait;
+use Illuminate\Support\Facades\DB;
 
 class BlogModelRepository implements BlogRepository
 {
-    use ExceptionHandlerTrait, FileTrait;
+    use FileTrait;
 
     public function all(array $columns = ['*'], array $filters = []): LengthAwarePaginator
     {
@@ -27,28 +27,21 @@ class BlogModelRepository implements BlogRepository
 
     public function store(array $data): mixed
     {
-        return $this->execute(function () use ($data) {
-            Blog::create($data);
-        });
+        return Blog::create($data);
     }
 
     public function update(array $data, Blog $blog, bool $updateTranslations = false): mixed
     {
-        return $this->execute(function () use ($data, $blog) {
-            $blog->update($data);
-
-            return true;
-        });
+        return $blog->update($data);
     }
 
     public function deleteMulti(array $ids): ?bool
     {
-        return $this->execute(function () use ($ids) {
-            $images = Blog::whereIn('id', $ids)->pluck('image')->filter()->toArray();
-            Blog::destroy($ids);
-            $this->deleteFile($images);
-
-            return true;
+        return DB::transaction(function () use ($ids) {
+            $blogs = Blog::whereIn('id', $ids)->get();
+            $deleted = Blog::destroy($ids);
+            $this->deleteFile($blogs->pluck('image')->filter()->values()->all());
+            return $deleted === count($ids);
         });
     }
 }

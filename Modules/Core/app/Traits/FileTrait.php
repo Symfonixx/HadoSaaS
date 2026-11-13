@@ -5,7 +5,7 @@ namespace Modules\Core\Traits;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Laravel\Facades\Image;
-use Symfony\Component\HttpFoundation\File\Exception\FileException;
+use Illuminate\Validation\ValidationException;
 
 trait FileTrait
 {
@@ -21,9 +21,7 @@ trait FileTrait
         string $disk = 'public'
     ): ?string {
         // Validate the file
-        if (! $this->isValidFile($file)) {
-            return null;
-        }
+        $extension = $this->validatedExtension($file);
 
         // Remove an old file if specified
         if ($old) {
@@ -31,10 +29,10 @@ trait FileTrait
         }
 
         // Generate a secure filename
-        $filename = $this->generateFilename($file, $name);
+        $filename = bin2hex(random_bytes(20)).'.'.$extension;
 
         // Handle PDF files
-        if ($file->getMimeType() === 'application/pdf') {
+        if ($extension === 'pdf') {
             return Storage::disk($disk)->putFileAs($dir, $file, $filename);
         }
 
@@ -51,57 +49,52 @@ trait FileTrait
     /**
      * Validates if a file is acceptable for upload.
      */
-    private function isValidFile(UploadedFile $file): bool
+    private function validatedExtension(UploadedFile $file): string
     {
         if (! $file->isValid()) {
-            session()->flushMessage(false, __('The selected file is not valid.'));
-
-            return false;
+            throw ValidationException::withMessages(['file' => __('The selected file is not valid.')]);
         }
 
-        $allowedMimeTypes = config('core.allowed_mime_types');
-        if (! in_array($file->getMimeType(), $allowedMimeTypes, true)) {
-            session()->flushMessage(false, __('File type is not allowed.'));
-
-            return false;
+        $mime = $file->getMimeType();
+        $types = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp', 'application/pdf' => 'pdf'];
+        if (! isset($types[$mime]) || ! in_array($mime, config('core.allowed_mime_types', array_keys($types)), true)) {
+            throw ValidationException::withMessages(['file' => __('File type is not allowed.')]);
         }
 
-        return true;
+        if ($mime !== 'application/pdf' && ! @getimagesize($file->getRealPath())) {
+            throw ValidationException::withMessages(['file' => __('The uploaded image is invalid.')]);
+        }
+
+        return $types[$mime];
     }
 
     /**
      * Deletes a file from the specified disk.
      */
-    public function deleteFile(string $filename, string $disk = 'public'): void
+    public function deleteFile(string|array|\Illuminate\Support\Collection|null $filename, string $disk = 'public'): void
     {
-        try {
-            Storage::disk($disk)->delete($filename);
-        } catch (FileException $exception) {
-            session()->flushMessage(false, __('An Error Occurred!'), $exception);
+        if ($filename instanceof \Illuminate\Support\Collection) {
+            $filename = $filename->all();
+        }
+        foreach ((array) $filename as $path) {
+            if (! is_string($path) || $path === '' || str_contains($path, '..') || str_starts_with($path, '/') || str_contains($path, '\\')) {
+                throw new \InvalidArgumentException('Invalid stored file path.');
+            }
+            Storage::disk($disk)->delete($path);
         }
     }
 
     /**
      * Generates a sanitized, secure filename.
      */
-    private function generateFilename(UploadedFile $file, ?string $name = null): string
-    {
-        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-        $sanitizedOriginalName = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $originalName);
-        $hash = md5($sanitizedOriginalName.time());
-
-        return ($name ?? $hash).'.'.$file->getClientOriginalExtension();
-    }
-
     /**
      * Deletes an entire directory from the specified disk.
      */
     public function deleteDir(string $dir, string $disk = 'public'): void
     {
-        try {
-            Storage::disk($disk)->deleteDirectory($dir);
-        } catch (FileException $exception) {
-            session()->flushMessage(false, __('An Error Occurred!'), $exception);
+        if ($dir === '' || str_contains($dir, '..') || str_starts_with($dir, '/') || str_contains($dir, '\\')) {
+            throw new \InvalidArgumentException('Invalid storage directory.');
         }
+        Storage::disk($disk)->deleteDirectory($dir);
     }
 }

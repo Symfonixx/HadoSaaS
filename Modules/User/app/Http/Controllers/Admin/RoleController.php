@@ -47,7 +47,7 @@ class RoleController extends Controller
         return back();
     }
 
-    public function delete_role($id)
+    public function destroy($id)
     {
         $this->roleService->delete($id);
 

@@ -54,7 +54,9 @@ class BlogApplicationService
             updateTranslations: $command->updateTranslations
         );
 
-        $this->repository->update($payload, $blog, $command->updateTranslations);
+        if (! $this->repository->update($payload, $blog, $command->updateTranslations)) {
+            throw new \RuntimeException('The blog update did not persist.');
+        }
         $this->clearCache();
         $this->flashMessenger->success();
     }
@@ -72,7 +74,9 @@ class BlogApplicationService
      */
     public function deleteMulti(array $ids): void
     {
-        $this->repository->deleteMulti($ids);
+        if (! $this->repository->deleteMulti($ids)) {
+            throw new \RuntimeException('The selected blogs could not all be deleted.');
+        }
         $this->clearCache();
         $this->flashMessenger->success();
     }

@@ -23,14 +23,14 @@ class StaffController extends Controller
     public function index()
     {
         $roles = $this->roleService->all();
-        $model = $this->userService->paginate('admin');
+        $model = $this->userService->paginate('staff');
 
         return view('user::.admin.staff.index', compact('model', 'roles'));
     }
 
     public function store(StoreUserRequest $request)
     {
-        $userData = UserData::validateAndCreate($request->all());
+        $userData = UserData::validateAndCreate(array_merge($request->all(), ['type' => 'staff']));
         $user = $this->userService->store($userData);
         $this->roleService->assignUsersToRole($request->input('role_id'), [$user->id]);
 
@@ -39,8 +39,8 @@ class StaffController extends Controller
 
     public function update(Request $request, $id)
     {
-        $userData = UserData::validateAndCreate($request->all());
-        $user = $this->userService->find($id);
+        $userData = UserData::validateAndCreate(array_merge($request->all(), ['type' => 'staff']));
+        $user = \App\Models\User::query()->where('type', 'staff')->findOrFail($id);
         $this->userService->update($userData, $user);
 
         return redirect()->route('admin.staffs.index');
@@ -48,7 +48,7 @@ class StaffController extends Controller
 
     public function destroy($id)
     {
-        $user = $this->userService->find($id);
+        $user = \App\Models\User::query()->where('type', 'staff')->findOrFail($id);
         $this->userService->delete($user);
 
         return response()->json([

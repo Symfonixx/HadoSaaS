@@ -33,7 +33,9 @@ class RoleManagementApplicationService
     public function store(string $name, array $permissions): ?Role
     {
         $role = $this->roleRepository->store($name, $permissions);
-        $this->flashMessenger->success();
+        if ($role) {
+            $this->flashMessenger->success();
+        }
 
         return $role;
     }
@@ -41,7 +43,9 @@ class RoleManagementApplicationService
     public function update(int $id, string $name, array $permissions): ?Role
     {
         $role = $this->roleRepository->update($id, $name, $permissions);
-        $this->flashMessenger->success();
+        if ($role) {
+            $this->flashMessenger->success();
+        }
 
         return $role;
     }
@@ -49,7 +53,9 @@ class RoleManagementApplicationService
     public function delete(int $id): bool
     {
         $deleted = (bool) $this->roleRepository->delete($id);
-        $this->flashMessenger->success();
+        if ($deleted) {
+            $this->flashMessenger->success();
+        }
 
         return $deleted;
     }
@@ -57,7 +63,9 @@ class RoleManagementApplicationService
     public function assignUsersToRole(int $id, array $userIds): bool
     {
         $assigned = $this->roleRepository->assignUsersToRole($id, $userIds);
-        $this->flashMessenger->success();
+        if ($assigned) {
+            $this->flashMessenger->success();
+        }
 
         return $assigned;
     }
@@ -65,7 +73,9 @@ class RoleManagementApplicationService
     public function removeUsersFromRole(int $id, array $userIds): bool
     {
         $removed = $this->roleRepository->removeUsersFromRole($id, $userIds);
-        $this->flashMessenger->success();
+        if ($removed) {
+            $this->flashMessenger->success();
+        }
 
         return $removed;
     }
@@ -73,7 +83,9 @@ class RoleManagementApplicationService
     public function removeUserFromRole(int $id, int $userId): bool
     {
         $removed = $this->roleRepository->removeUserFromRole($id, $userId);
-        $this->flashMessenger->success();
+        if ($removed) {
+            $this->flashMessenger->success();
+        }
 
         return $removed;
     }

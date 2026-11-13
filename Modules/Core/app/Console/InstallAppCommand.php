@@ -21,7 +21,7 @@ class InstallAppCommand extends Command
                             {--skip-sql : Skip importing Modules/Core/database/db.sql}
                             {--admin-name=Admin : Initial admin display name}
                             {--admin-email=admin@example.com : Initial admin email}
-                            {--admin-password=12345678 : Initial admin password}
+                            {--admin-password= : Initial admin password (prompted securely when omitted)}
                             {--admin-mobile=0905000000000 : Initial admin mobile}';
 
     /**
@@ -52,12 +52,19 @@ class InstallAppCommand extends Command
             }
         }
 
-        $this->bootstrapAdmin();
+        $password = (string) $this->option('admin-password');
+        if ($password === '') {
+            $password = (string) $this->secret('Choose an administrator password (minimum 12 characters)');
+            if (strlen($password) < 12) {
+                $this->components->error('Administrator password must be at least 12 characters.');
+                return self::FAILURE;
+            }
+        }
+        $this->bootstrapAdmin($password);
 
         $this->newLine();
         $this->components->info('Application installed successfully.');
         $this->components->twoColumnDetail('Admin Email', $this->option('admin-email'));
-        $this->components->twoColumnDetail('Admin Password', $this->option('admin-password'));
 
         return self::SUCCESS;
     }
@@ -109,9 +116,9 @@ class InstallAppCommand extends Command
         return Schema::hasTable('countries') && DB::table('countries')->exists();
     }
 
-    private function bootstrapAdmin(): void
+    private function bootstrapAdmin(string $password): void
     {
-        DB::transaction(function () {
+        DB::transaction(function () use ($password) {
             $adminEmail = (string) $this->option('admin-email');
             $adminMobile = (string) $this->option('admin-mobile');
 
@@ -123,7 +130,7 @@ class InstallAppCommand extends Command
 
             $userAttributes = [
                 'name' => $this->option('admin-name'),
-                'password' => Hash::make((string) $this->option('admin-password')),
+                'password' => Hash::make($password),
                 'email' => $adminEmail,
                 'mobile' => $adminMobile,
                 'type' => 'admin',
@@ -135,9 +142,10 @@ class InstallAppCommand extends Command
                 ->first();
 
             if ($user) {
-                $user->fill($userAttributes)->save();
+                $user->fill(collect($userAttributes)->except('type')->all())->forceFill(['type' => 'admin'])->save();
             } else {
-                $user = User::query()->create($userAttributes);
+                $user = User::query()->create(collect($userAttributes)->except('type')->all());
+                $user->forceFill(['type' => 'admin'])->save();
             }
 
             if (! $user->hasRole($role->name)) {

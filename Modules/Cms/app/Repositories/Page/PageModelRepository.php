@@ -5,12 +5,12 @@ namespace Modules\Cms\Repositories\Page;
 use Config;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Modules\Cms\Models\Page;
-use Modules\Core\Traits\ExceptionHandlerTrait;
 use Modules\Core\Traits\FileTrait;
+use Illuminate\Support\Facades\DB;
 
 class PageModelRepository implements PageRepository
 {
-    use ExceptionHandlerTrait, FileTrait;
+    use FileTrait;
 
     /**
      * Fetch all pages with optional filters and pagination.
@@ -38,9 +38,7 @@ class PageModelRepository implements PageRepository
      */
     public function store(array $data): mixed
     {
-        return $this->execute(function () use ($data) {
-            Page::create($data);
-        });
+        return Page::create($data);
     }
 
     /**
@@ -48,11 +46,7 @@ class PageModelRepository implements PageRepository
      */
     public function update(array $data, Page $page, bool $updateTranslations = false): mixed
     {
-        return $this->execute(function () use ($data, $page) {
-            $page->update($data);
-
-            return true;
-        });
+        return $page->update($data);
     }
 
     /**
@@ -60,12 +54,11 @@ class PageModelRepository implements PageRepository
      */
     public function deleteMulti(array $ids): ?bool
     {
-        return $this->execute(function () use ($ids) {
-            $images = Page::whereIn('id', $ids)->pluck('image')->filter()->toArray();
-            Page::destroy($ids);
-            $this->deleteFile($images);
-
-            return true;
+        return DB::transaction(function () use ($ids) {
+            $pages = Page::whereIn('id', $ids)->get();
+            $deleted = Page::destroy($ids);
+            $this->deleteFile($pages->pluck('image')->filter()->values()->all());
+            return $deleted === count($ids);
         });
     }
 }

@@ -28,7 +28,9 @@ class UserManagementApplicationService
     public function store(UserData $userData): ?User
     {
         $user = $this->userRepository->store($userData);
-        $this->flashMessenger->success();
+        if ($user) {
+            $this->flashMessenger->success();
+        }
 
         return $user;
     }
@@ -36,7 +38,9 @@ class UserManagementApplicationService
     public function update(UserData $userData, User $user): ?User
     {
         $updated = $this->userRepository->update($userData, $user);
-        $this->flashMessenger->success();
+        if ($updated) {
+            $this->flashMessenger->success();
+        }
 
         return $updated;
     }
@@ -44,7 +48,9 @@ class UserManagementApplicationService
     public function delete(User $user): bool
     {
         $deleted = $this->userRepository->delete($user);
-        $this->flashMessenger->success();
+        if ($deleted) {
+            $this->flashMessenger->success();
+        }
 
         return $deleted;
     }
