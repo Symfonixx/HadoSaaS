@@ -14,7 +14,11 @@ class UserModelRepository implements UserRepository
 
     public function all(string $type): LengthAwarePaginator
     {
-        return User::where('type', $type)->latest()->paginate(config('core.page_size'));
+        return User::query()
+            ->where('type', $type)
+            ->when($type === 'admin', fn ($query) => $query->whereDoesntHave('roles', fn ($roles) => $roles->where('name', 'Admin')))
+            ->latest()
+            ->paginate(config('core.page_size'));
     }
 
     public function find(int $id): ?User
@@ -24,25 +28,23 @@ class UserModelRepository implements UserRepository
 
     public function store(UserData $userData): ?User
     {
-        if (! in_array($userData->type, ['user', 'staff'], true)) {
-            throw new \Illuminate\Auth\Access\AuthorizationException('Only standard user accounts may be created through this workflow.');
+        if (! in_array($userData->type, ['user', 'admin'], true)) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('Only user or staff accounts may be created through this workflow.');
         }
 
-        $user = User::create([
-                'name' => $userData->name,
-                'email' => $userData->email,
-                'mobile' => $userData->mobile,
-                'password' => Hash::make($userData->password),
-            ]);
-
-        $user->forceFill(['type' => $userData->type])->save();
-        return $user;
+        return User::query()->forceCreate([
+            'name' => $userData->name,
+            'email' => $userData->email,
+            'mobile' => $userData->mobile,
+            'password' => Hash::make($userData->password),
+            'type' => $userData->type,
+        ]);
     }
 
     public function update(UserData $userData, User $user): ?User
     {
-        if ($user->type === 'admin') {
-            throw new \Illuminate\Auth\Access\AuthorizationException('This workflow cannot modify this account type.');
+        if ($user->hasRole('Admin')) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('The super-admin account cannot be modified through this workflow.');
         }
 
             $updateData = [
@@ -61,8 +63,12 @@ class UserModelRepository implements UserRepository
 
     public function delete(User $user): bool
     {
-        if ($user->type === 'admin') {
-            throw new \Illuminate\Auth\Access\AuthorizationException('This workflow cannot delete this account type.');
+        if ($user->hasRole('Admin')) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('The super-admin account cannot be deleted through this workflow.');
+        }
+
+        if ($user->type === 'admin' && User::query()->where('type', 'admin')->count() <= 1) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('The last administrator account cannot be deleted.');
         }
 
         if ($user->img) {

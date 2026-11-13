@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -21,7 +23,7 @@ class InstallAppCommand extends Command
                             {--skip-sql : Skip importing Modules/Core/database/db.sql}
                             {--admin-name=Admin : Initial admin display name}
                             {--admin-email=admin@example.com : Initial admin email}
-                            {--admin-password= : Initial admin password (prompted securely when omitted)}
+                            {--admin-password-env=HADO_ADMIN_PASSWORD : Environment variable containing the initial administrator password}
                             {--admin-mobile=0905000000000 : Initial admin mobile}';
 
     /**
@@ -35,6 +37,17 @@ class InstallAppCommand extends Command
     public function handle(): int
     {
         $this->components->info('Starting HadoSaaS installation...');
+
+        if (! $this->adminIdentityIsAvailable()) {
+            $this->components->error('The configured administrator email or mobile already belongs to an account. Choose unused values.');
+
+            return self::FAILURE;
+        }
+
+        $password = $this->resolveAdminPassword();
+        if ($password === null) {
+            return self::FAILURE;
+        }
 
         if (! config('app.key')) {
             $this->components->task('Generating APP_KEY', function () {
@@ -52,14 +65,12 @@ class InstallAppCommand extends Command
             }
         }
 
-        $password = (string) $this->option('admin-password');
-        if ($password === '') {
-            $password = (string) $this->secret('Choose an administrator password (minimum 12 characters)');
-            if (strlen($password) < 12) {
-                $this->components->error('Administrator password must be at least 12 characters.');
-                return self::FAILURE;
-            }
+        if (! $this->adminIdentityIsAvailable()) {
+            $this->components->error('The configured administrator email or mobile already belongs to an account. Choose unused values.');
+
+            return self::FAILURE;
         }
+
         $this->bootstrapAdmin($password);
 
         $this->newLine();
@@ -67,6 +78,52 @@ class InstallAppCommand extends Command
         $this->components->twoColumnDetail('Admin Email', $this->option('admin-email'));
 
         return self::SUCCESS;
+    }
+
+    private function resolveAdminPassword(): ?string
+    {
+        $environmentKey = (string) $this->option('admin-password-env');
+        $password = getenv($environmentKey);
+        if ($password === false) {
+            $password = $_ENV[$environmentKey] ?? $_SERVER[$environmentKey] ?? '';
+        }
+
+        if ($password === '' && $this->input->isInteractive()) {
+            $password = $this->secret('Choose an administrator password');
+        }
+
+        if (! is_string($password) || $password === '') {
+            $this->components->error('Set the configured password environment variable or run the installer interactively.');
+
+            return null;
+        }
+
+        $validator = Validator::make(['password' => $password], [
+            'password' => [Password::min(12)->letters()->mixedCase()->numbers()->symbols()],
+        ]);
+
+        if ($validator->fails()) {
+            $this->components->error('Administrator password must be at least 12 characters and include upper and lower case letters, a number, and a symbol.');
+
+            return null;
+        }
+
+        return $password;
+    }
+
+    private function adminIdentityIsAvailable(): bool
+    {
+        if (! Schema::hasTable('users')) {
+            return true;
+        }
+
+        $email = (string) $this->option('admin-email');
+        $mobile = (string) $this->option('admin-mobile');
+
+        return ! User::query()
+            ->where('email', $email)
+            ->orWhere('mobile', $mobile)
+            ->exists();
     }
 
     private function runMigrations(): void
@@ -128,6 +185,10 @@ class InstallAppCommand extends Command
             ]);
             $role->syncPermissions(Permission::all());
 
+            if (User::query()->where('email', $adminEmail)->orWhere('mobile', $adminMobile)->exists()) {
+                throw new \RuntimeException('The configured administrator identity is already in use.');
+            }
+
             $userAttributes = [
                 'name' => $this->option('admin-name'),
                 'password' => Hash::make($password),
@@ -136,17 +197,7 @@ class InstallAppCommand extends Command
                 'type' => 'admin',
             ];
 
-            $user = User::query()
-                ->where('email', $adminEmail)
-                ->orWhere('mobile', $adminMobile)
-                ->first();
-
-            if ($user) {
-                $user->fill(collect($userAttributes)->except('type')->all())->forceFill(['type' => 'admin'])->save();
-            } else {
-                $user = User::query()->create(collect($userAttributes)->except('type')->all());
-                $user->forceFill(['type' => 'admin'])->save();
-            }
+            $user = User::query()->forceCreate($userAttributes);
 
             if (! $user->hasRole($role->name)) {
                 $user->assignRole($role);

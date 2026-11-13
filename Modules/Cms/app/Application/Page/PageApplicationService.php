@@ -63,9 +63,13 @@ class PageApplicationService
      */
     public function deleteMulti(array $ids): void
     {
-        $this->repository->deleteMulti($ids);
+        $cleanupComplete = $this->repository->deleteMulti($ids);
         $this->clearCache();
-        $this->flashMessenger->success();
+        if ($cleanupComplete) {
+            $this->flashMessenger->success();
+        } else {
+            $this->flashMessenger->error('Page records were deleted; file cleanup is pending and will be retried.');
+        }
     }
 
     private function clearCache(): void

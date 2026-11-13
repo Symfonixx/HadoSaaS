@@ -3,8 +3,10 @@
 namespace Modules\Core\Providers;
 
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\ServiceProvider;
 use Modules\Core\Console\InstallAppCommand;
+use Modules\Core\Console\ProcessPendingFileDeletionsCommand;
 use Modules\Core\Contracts\Flash\FlashMessengerInterface;
 use Modules\Core\Contracts\Translation\TranslatorInterface;
 use Modules\Core\Services\Flash\SessionFlashMessenger;
@@ -37,7 +39,7 @@ class CoreServiceProvider extends ServiceProvider
      */
     protected function registerCommands(): void
     {
-        $this->commands([InstallAppCommand::class]);
+        $this->commands([InstallAppCommand::class, ProcessPendingFileDeletionsCommand::class]);
     }
 
     /**
@@ -45,10 +47,9 @@ class CoreServiceProvider extends ServiceProvider
      */
     protected function registerCommandSchedules(): void
     {
-        // $this->app->booted(function () {
-        //     $schedule = $this->app->make(Schedule::class);
-        //     $schedule->command('inspire')->hourly();
-        // });
+        $this->app->booted(function () {
+            Schedule::command('files:cleanup-pending')->everyFiveMinutes()->withoutOverlapping();
+        });
     }
 
     /**

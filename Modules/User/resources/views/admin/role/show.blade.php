@@ -573,7 +573,7 @@
                                     <!--begin::Checkbox-->
                                     <td>
                                         <div class="form-check form-check-sm form-check-custom form-check-solid">
-                                            <input class="form-check-input" type="checkbox" name="usersIds[]"
+                                            <input class="form-check-input" type="checkbox" name="user_ids[]"
                                                    value="{{$user->id}}"/>
                                         </div>
                                     </td>

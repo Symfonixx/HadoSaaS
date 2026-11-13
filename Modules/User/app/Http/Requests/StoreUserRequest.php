@@ -3,6 +3,7 @@
 namespace Modules\User\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreUserRequest extends FormRequest
 {
@@ -17,6 +18,9 @@ class StoreUserRequest extends FormRequest
             'email' => 'required|email|unique:users,email',
             'mobile' => 'required|numeric|min_digits:11|unique:users,mobile',
             'password' => 'required|min:6',
+            'role_id' => $this->routeIs('admin.staffs.store')
+                ? ['required', 'integer', Rule::exists('roles', 'id')->where(fn ($query) => $query->where('name', '!=', 'Admin'))]
+                : ['prohibited'],
         ];
     }
 

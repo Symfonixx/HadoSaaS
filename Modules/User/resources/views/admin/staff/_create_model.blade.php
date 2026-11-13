@@ -17,7 +17,6 @@
         <form method="POST" action="{{route('admin.staffs.store')}}">
             @csrf
 
-            <input type="hidden" name="type" value="admin">
 
             <div class="modal-body">
                 <div class="mb-5">

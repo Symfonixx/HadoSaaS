@@ -3,9 +3,12 @@
 namespace Modules\Core\Traits;
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Laravel\Facades\Image;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 trait FileTrait
 {
@@ -80,13 +83,98 @@ trait FileTrait
             if (! is_string($path) || $path === '' || str_contains($path, '..') || str_starts_with($path, '/') || str_contains($path, '\\')) {
                 throw new \InvalidArgumentException('Invalid stored file path.');
             }
-            Storage::disk($disk)->delete($path);
+            $storage = Storage::disk($disk);
+            if ($storage->exists($path) && ! $storage->delete($path)) {
+                throw new \RuntimeException("Could not delete stored file [{$path}].");
+            }
         }
     }
 
-    /**
-     * Generates a sanitized, secure filename.
-     */
+    protected function queueFileDeletionIfUnreferenced(?string $path, string $disk = 'public'): void
+    {
+        if ($path === null || trim($path) === '' || $this->isFileReferenced($path)) {
+            return;
+        }
+
+        DB::table('pending_file_deletions')->insertOrIgnore([
+            'disk' => $disk,
+            'path' => $path,
+            'path_hash' => hash('sha256', $path),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    protected function normalizeDeletionIds(array $ids): array
+    {
+        if ($ids === []) {
+            throw new \InvalidArgumentException('At least one record ID is required for deletion.');
+        }
+
+        $normalized = [];
+        foreach ($ids as $id) {
+            if (! is_int($id) && (! is_string($id) || ! ctype_digit($id))) {
+                throw new \InvalidArgumentException('Deletion IDs must be positive integers.');
+            }
+
+            $id = (int) $id;
+            if ($id < 1) {
+                throw new \InvalidArgumentException('Deletion IDs must be positive integers.');
+            }
+            $normalized[$id] = $id;
+        }
+
+        return array_values($normalized);
+    }
+
+    /** Process durable deletion requests; failures remain queued for a later retry. */
+    public function processPendingFileDeletions(): array
+    {
+        $completed = 0;
+        $failed = 0;
+
+        foreach (DB::table('pending_file_deletions')->orderBy('id')->get() as $pending) {
+            try {
+                if (! $this->isFileReferenced($pending->path)) {
+                    $this->deleteFile($pending->path, $pending->disk);
+                }
+
+                DB::table('pending_file_deletions')->where('id', $pending->id)->delete();
+                $completed++;
+            } catch (Throwable $exception) {
+                report($exception);
+                $failed++;
+            }
+        }
+
+        return ['completed' => $completed, 'failed' => $failed];
+    }
+
+    private function isFileReferenced(string $path): bool
+    {
+        $references = [
+            'blogs' => ['image', 'meta_image'],
+            'pages' => ['image', 'meta_image'],
+            'media' => ['path'],
+            'users' => ['img'],
+            'settings' => ['value'],
+        ];
+
+        foreach ($references as $table => $columns) {
+            if (! Schema::hasTable($table)) {
+                continue;
+            }
+
+            foreach ($columns as $column) {
+                if (Schema::hasColumn($table, $column) && DB::table($table)->where($column, $path)->exists()) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Deletes an entire directory from the specified disk.
      */
@@ -95,6 +183,9 @@ trait FileTrait
         if ($dir === '' || str_contains($dir, '..') || str_starts_with($dir, '/') || str_contains($dir, '\\')) {
             throw new \InvalidArgumentException('Invalid storage directory.');
         }
-        Storage::disk($disk)->deleteDirectory($dir);
+        $storage = Storage::disk($disk);
+        if ($storage->directoryExists($dir) && ! $storage->deleteDirectory($dir)) {
+            throw new \RuntimeException("Could not delete storage directory [{$dir}].");
+        }
     }
 }

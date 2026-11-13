@@ -3,10 +3,12 @@
 namespace Modules\Cms\Repositories\Blog;
 
 use Config;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 use Modules\Cms\Models\Blog;
 use Modules\Core\Traits\FileTrait;
-use Illuminate\Support\Facades\DB;
 
 class BlogModelRepository implements BlogRepository
 {
@@ -37,11 +39,40 @@ class BlogModelRepository implements BlogRepository
 
     public function deleteMulti(array $ids): ?bool
     {
-        return DB::transaction(function () use ($ids) {
-            $blogs = Blog::whereIn('id', $ids)->get();
-            $deleted = Blog::destroy($ids);
-            $this->deleteFile($blogs->pluck('image')->filter()->values()->all());
-            return $deleted === count($ids);
-        });
+        $ids = $this->normalizeDeletionIds($ids);
+
+        $queuedPathHashes = DB::transaction(function () use ($ids) {
+            $blogs = Blog::query()->whereIn('id', $ids)->lockForUpdate()->get();
+            if ($blogs->count() !== count($ids)) {
+                $missing = array_values(array_diff($ids, $blogs->modelKeys()));
+                throw (new ModelNotFoundException)->setModel(Blog::class, $missing);
+            }
+
+            $mediaPaths = $blogs->flatMap(fn (Blog $blog) => [$blog->image, $blog->meta_image])
+                ->filter(fn ($path) => is_string($path) && $path !== '')
+                ->unique()
+                ->values();
+
+            if (Blog::destroy($ids) !== count($ids)) {
+                throw new \RuntimeException('The selected blogs could not all be deleted.');
+            }
+
+            $mediaPaths->each(fn (string $path) => $this->queueFileDeletionIfUnreferenced($path));
+
+            return $mediaPaths->map(fn (string $path) => hash('sha256', $path))->all();
+        }, 3);
+
+        try {
+            $this->processPendingFileDeletions();
+
+            return $queuedPathHashes === [] || ! DB::table('pending_file_deletions')
+                ->where('disk', 'public')
+                ->whereIn('path_hash', $queuedPathHashes)
+                ->exists();
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return false;
+        }
     }
 }

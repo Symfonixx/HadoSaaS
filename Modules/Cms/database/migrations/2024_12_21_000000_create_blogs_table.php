@@ -17,7 +17,7 @@ return new class extends Migration {
             $table->json('description');
             $table->json('content');
             $table->string('image');
-            $table->string('meta_image');
+            $table->string('meta_image')->nullable();
             $table->json('meta_title')->nullable();
             $table->json('meta_description')->nullable();
             $table->json('meta_keywords')->nullable();

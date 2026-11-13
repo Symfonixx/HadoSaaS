@@ -74,11 +74,13 @@ class BlogApplicationService
      */
     public function deleteMulti(array $ids): void
     {
-        if (! $this->repository->deleteMulti($ids)) {
-            throw new \RuntimeException('The selected blogs could not all be deleted.');
-        }
+        $cleanupComplete = $this->repository->deleteMulti($ids);
         $this->clearCache();
-        $this->flashMessenger->success();
+        if ($cleanupComplete) {
+            $this->flashMessenger->success();
+        } else {
+            $this->flashMessenger->error('Blog records were deleted; file cleanup is pending and will be retried.');
+        }
     }
 
     private function clearCache(): void

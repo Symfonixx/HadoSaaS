@@ -8,6 +8,7 @@ use Modules\User\Application\Role\RoleManagementApplicationService;
 use Modules\User\Application\User\UserManagementApplicationService;
 use Modules\User\app\Data\UserData;
 use Modules\User\Http\Requests\StoreUserRequest;
+use Spatie\Permission\Models\Role;
 
 class StaffController extends Controller
 {
@@ -22,15 +23,15 @@ class StaffController extends Controller
 
     public function index()
     {
-        $roles = $this->roleService->all();
-        $model = $this->userService->paginate('staff');
+        $roles = $this->roleService->all()->reject(fn (Role $role) => $role->name === 'Admin');
+        $model = $this->userService->paginate('admin');
 
         return view('user::.admin.staff.index', compact('model', 'roles'));
     }
 
     public function store(StoreUserRequest $request)
     {
-        $userData = UserData::validateAndCreate(array_merge($request->all(), ['type' => 'staff']));
+        $userData = UserData::validateAndCreate(array_merge($request->all(), ['type' => 'admin']));
         $user = $this->userService->store($userData);
         $this->roleService->assignUsersToRole($request->input('role_id'), [$user->id]);
 
@@ -39,8 +40,8 @@ class StaffController extends Controller
 
     public function update(Request $request, $id)
     {
-        $userData = UserData::validateAndCreate(array_merge($request->all(), ['type' => 'staff']));
-        $user = \App\Models\User::query()->where('type', 'staff')->findOrFail($id);
+        $userData = UserData::validateAndCreate(array_merge($request->all(), ['type' => 'admin']));
+        $user = \App\Models\User::query()->where('type', 'admin')->whereDoesntHave('roles', fn ($query) => $query->where('name', 'Admin'))->findOrFail($id);
         $this->userService->update($userData, $user);
 
         return redirect()->route('admin.staffs.index');
@@ -48,7 +49,7 @@ class StaffController extends Controller
 
     public function destroy($id)
     {
-        $user = \App\Models\User::query()->where('type', 'staff')->findOrFail($id);
+        $user = \App\Models\User::query()->where('type', 'admin')->whereDoesntHave('roles', fn ($query) => $query->where('name', 'Admin'))->findOrFail($id);
         $this->userService->delete($user);
 
         return response()->json([
