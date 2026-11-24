@@ -16,7 +16,7 @@ if (! function_exists('autoGoogleTranslator')) {
      * @param int $cacheTtl Cache time-to-live in minutes
      * @return string|null The translated text, or original content if translation fails
      */
-    function autoGoogleTranslator(string $targetLang, string $content, int $maxRetries = 3, int $cacheTtl = 60)
+    function autoGoogleTranslator(string $targetLang, string $content, int $maxRetries = 1, int $cacheTtl = 60)
     {
         // Skip translation if content is empty or already in target language
         if (trim($content) === '') {
@@ -34,7 +34,9 @@ if (! function_exists('autoGoogleTranslator')) {
         $translator->setTarget($targetLang);
 
         $attempt = 0;
-        $delay = 1; // Start with 1 second delay
+        // CMS writes translate multiple fields synchronously. Keep retries short
+        // so a temporary Google rate limit cannot stall the entire request.
+        $delay = 0.1;
 
         while ($attempt <= $maxRetries) {
             try {

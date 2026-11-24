@@ -21,4 +21,7 @@ interface SeoRepository
 
     /** @param array<string, string> $translations */
     public function setTranslations(string $key, array $translations): bool;
+
+    /** @param array<string, array<string, string>> $values */
+    public function setTranslationsBatch(array $values): void;
 }

@@ -70,11 +70,7 @@ class SeoApplicationService
 
         // Step 4: Persist all data within a database transaction (no external API calls here)
         DB::transaction(function () use ($prepared, $robotsTxt): void {
-            foreach ($prepared as $key => $translations) {
-                if (! $this->seoRepository->setTranslations($key, $translations)) {
-                    throw new \RuntimeException("SEO value [{$key}] was not persisted.");
-                }
-            }
+            $this->seoRepository->setTranslationsBatch($prepared);
             if ($robotsTxt !== null && ! $this->settingsRepository->set('robots_txt', $robotsTxt)) {
                 throw new \RuntimeException('Robots text was not persisted.');
             }

@@ -31,4 +31,19 @@ class SeoModelRepository implements SeoRepository
     {
         return Seo::setTranslations($key, $translations);
     }
+
+    /** @param array<string, array<string, string>> $values */
+    public function setTranslationsBatch(array $values): void
+    {
+        if ($values === []) {
+            return;
+        }
+
+        $rows = [];
+        foreach ($values as $key => $translations) {
+            $rows[] = ['key' => $key, 'value' => json_encode($translations, JSON_THROW_ON_ERROR)];
+        }
+
+        Seo::query()->upsert($rows, ['key'], ['value']);
+    }
 }
